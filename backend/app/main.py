@@ -1,0 +1,123 @@
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+
+from app.config import settings
+from app.database import Base, check_database, engine
+from app.middleware.rate_limit import limiter
+from app.middleware.request_id import RequestIdMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
+import app.services.event_handlers  # noqa: F401 — registers event handlers as a side effect
+from app.routers import (
+    agents,
+    appointments,
+    auth,
+    campaigns,
+    communications,
+    contacts,
+    dashboard,
+    enterprise,
+    inbox,
+    integrations,
+    intelligence,
+    kanban,
+    leads,
+    messenger,
+    notes,
+    openclaw,
+    opportunities,
+    organizations,
+    pm_advanced,
+    products_services,
+    projects,
+    quotes,
+    reviews,
+    tasks,
+    webhooks,
+    workflow_runtime,
+    workflows,
+)
+
+
+def create_app() -> FastAPI:
+    if settings.environment == "production" and settings.secret_key.startswith("local-"):
+        raise RuntimeError("SECRET_KEY must be changed before production startup")
+
+    if settings.auto_create_tables:
+        # Local/dev convenience. In production set AUTO_CREATE_TABLES=false and run Alembic.
+        Base.metadata.create_all(bind=engine)
+
+    app = FastAPI(
+        title="Mighty CRM API",
+        version=settings.app_version,
+        debug=settings.debug,
+    )
+
+    app.state.limiter = limiter
+
+    @app.exception_handler(RateLimitExceeded)
+    async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+        return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded. Please slow down."})
+
+    app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/health")
+    def health():
+        return {"ok": True, "service": "mighty-crm", "version": settings.app_version}
+
+    @app.get("/health/live")
+    def live():
+        return {"ok": True}
+
+    @app.get("/health/ready")
+    def ready():
+        try:
+            check_database()
+            return {"ok": True, "database": "ready"}
+        except Exception as exc:  # pragma: no cover - defensive health endpoint
+            raise HTTPException(status_code=503, detail=f"Database not ready: {exc}") from exc
+
+    for router in [
+        auth.router,
+        organizations.router,
+        leads.router,
+        contacts.router,
+        opportunities.router,
+        tasks.router,
+        communications.router,
+        notes.router,
+        agents.router,
+        dashboard.router,
+        campaigns.router,
+        workflows.router,
+        inbox.router,
+        appointments.router,
+        products_services.router,
+        quotes.router,
+        reviews.router,
+        integrations.router,
+        enterprise.router,
+        intelligence.router,
+        workflow_runtime.router,
+        webhooks.router,
+        messenger.router,
+        openclaw.router,
+        projects.router,
+        pm_advanced.router,
+        kanban.router,
+    ]:
+        app.include_router(router)
+
+    return app
+
+
+app = create_app()
