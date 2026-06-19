@@ -896,3 +896,255 @@ class ProjectAutomationRule(Base, TimestampMixin):
     condition_json: Mapped[dict] = mapped_column(JSON, default=dict)
     action_json: Mapped[dict] = mapped_column(JSON, default=dict)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+# ============================================================
+# Sales & Revenue Intelligence
+# ============================================================
+
+class PipelineSnapshot(Base, TimestampMixin):
+    """Point-in-time snapshot of pipeline metrics for trend analysis."""
+    __tablename__ = "pipeline_snapshots"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    snapshot_date: Mapped[datetime] = mapped_column(DateTime, index=True)
+    metrics_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+# ============================================================
+# Automation & Integrations
+# ============================================================
+
+class WebhookDeliveryStatus(str, enum.Enum):
+    pending = "pending"
+    delivered = "delivered"
+    failed = "failed"
+    retrying = "retrying"
+
+class DripEnrollmentStatus(str, enum.Enum):
+    active = "active"
+    completed = "completed"
+    unsubscribed = "unsubscribed"
+    paused = "paused"
+
+class WebhookEndpoint(Base, TimestampMixin):
+    """Outbound webhook configuration — org subscribes to events and receives HTTP calls."""
+    __tablename__ = "webhook_endpoints"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    url: Mapped[str] = mapped_column(String(500))
+    secret: Mapped[str] = mapped_column(String(255))
+    events: Mapped[list] = mapped_column(JSON, default=list)   # e.g. ["lead.status_changed"]
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    description: Mapped[str | None] = mapped_column(String(255))
+
+class WebhookDelivery(Base, TimestampMixin):
+    """Record of each outbound webhook attempt."""
+    __tablename__ = "webhook_deliveries"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    endpoint_id: Mapped[str] = mapped_column(ForeignKey("webhook_endpoints.id"), index=True)
+    event_type: Mapped[str] = mapped_column(String(100), index=True)
+    payload_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[WebhookDeliveryStatus] = mapped_column(Enum(WebhookDeliveryStatus), default=WebhookDeliveryStatus.pending, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_response_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_response_body: Mapped[str | None] = mapped_column(Text)
+    next_retry_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+class ApiKey(Base, TimestampMixin):
+    """API key for programmatic / agent access."""
+    __tablename__ = "api_keys"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    key_prefix: Mapped[str] = mapped_column(String(12), index=True)   # visible e.g. "mcrm_abc123"
+    key_hash: Mapped[str] = mapped_column(String(255))                 # bcrypt hash of full key
+    scopes: Mapped[list] = mapped_column(JSON, default=list)           # ["leads:read", "leads:write"]
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+class DripSequence(Base, TimestampMixin):
+    """A named sequence of timed messages sent to enrolled leads."""
+    __tablename__ = "drip_sequences"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    channel: Mapped[Channel] = mapped_column(Enum(Channel), default=Channel.email)
+    trigger: Mapped[str] = mapped_column(String(100), default="manual")  # "manual", "lead_created", "lead_status_{x}"
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    steps: Mapped[list["DripStep"]] = relationship(back_populates="sequence", cascade="all, delete-orphan")
+
+class DripStep(Base, TimestampMixin):
+    """A single step in a drip sequence."""
+    __tablename__ = "drip_steps"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    sequence_id: Mapped[str] = mapped_column(ForeignKey("drip_sequences.id"), index=True)
+    position: Mapped[int] = mapped_column(Integer, default=1)
+    delay_hours: Mapped[int] = mapped_column(Integer, default=24)
+    subject: Mapped[str | None] = mapped_column(String(255))
+    message_template: Mapped[str] = mapped_column(Text, default="")
+    sequence: Mapped[DripSequence] = relationship(back_populates="steps")
+
+class DripEnrollment(Base, TimestampMixin):
+    """Tracks a lead's progression through a drip sequence."""
+    __tablename__ = "drip_enrollments"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    sequence_id: Mapped[str] = mapped_column(ForeignKey("drip_sequences.id"), index=True)
+    lead_id: Mapped[str] = mapped_column(ForeignKey("leads.id"), index=True)
+    status: Mapped[DripEnrollmentStatus] = mapped_column(Enum(DripEnrollmentStatus), default=DripEnrollmentStatus.active, index=True)
+    current_step: Mapped[int] = mapped_column(Integer, default=0)
+    next_send_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# ============================================================
+# Communication Hub
+# ============================================================
+
+class ScheduledMessageStatus(str, enum.Enum):
+    scheduled = "scheduled"
+    sent = "sent"
+    failed = "failed"
+    canceled = "canceled"
+
+class CallDisposition(str, enum.Enum):
+    connected = "connected"
+    voicemail = "voicemail"
+    no_answer = "no_answer"
+    busy = "busy"
+    wrong_number = "wrong_number"
+    callback_requested = "callback_requested"
+
+class ScheduledMessage(Base, TimestampMixin):
+    """A message queued for delivery at a future time."""
+    __tablename__ = "scheduled_messages"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    lead_id: Mapped[str | None] = mapped_column(ForeignKey("leads.id"), nullable=True, index=True)
+    drip_enrollment_id: Mapped[str | None] = mapped_column(ForeignKey("drip_enrollments.id"), nullable=True, index=True)
+    channel: Mapped[Channel] = mapped_column(Enum(Channel))
+    subject: Mapped[str | None] = mapped_column(String(255))
+    content: Mapped[str] = mapped_column(Text)
+    send_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    status: Mapped[ScheduledMessageStatus] = mapped_column(Enum(ScheduledMessageStatus), default=ScheduledMessageStatus.scheduled, index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text)
+    provider_message_id: Mapped[str | None] = mapped_column(String(255))
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+class CallLog(Base, TimestampMixin):
+    """Record of an inbound or outbound call."""
+    __tablename__ = "call_logs"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    lead_id: Mapped[str | None] = mapped_column(ForeignKey("leads.id"), nullable=True, index=True)
+    agent_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    direction: Mapped[Direction] = mapped_column(Enum(Direction))
+    disposition: Mapped[CallDisposition] = mapped_column(Enum(CallDisposition), default=CallDisposition.connected, index=True)
+    duration_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    recording_url: Mapped[str | None] = mapped_column(String(500))
+    notes: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+class EmailTemplate(Base, TimestampMixin):
+    """Reusable email template with variable substitution support."""
+    __tablename__ = "email_templates"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200), index=True)
+    subject: Mapped[str] = mapped_column(String(255))
+    body_html: Mapped[str] = mapped_column(Text, default="")
+    body_text: Mapped[str | None] = mapped_column(Text)
+    variables: Mapped[list] = mapped_column(JSON, default=list)  # ["lead_name", "company"]
+    category: Mapped[str] = mapped_column(String(100), default="general")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+# ============================================================
+# Customer Portal & Billing
+# ============================================================
+
+class PortalPermission(str, enum.Enum):
+    view_quotes = "view_quotes"
+    view_invoices = "view_invoices"
+    sign_documents = "sign_documents"
+    pay_invoices = "pay_invoices"
+    view_project_status = "view_project_status"
+
+class ESignatureStatus(str, enum.Enum):
+    pending = "pending"
+    signed = "signed"
+    declined = "declined"
+    expired = "expired"
+
+class PaymentLinkStatus(str, enum.Enum):
+    active = "active"
+    paid = "paid"
+    expired = "expired"
+    canceled = "canceled"
+
+class PortalToken(Base, TimestampMixin):
+    """Secure token granting a customer access to their portal view."""
+    __tablename__ = "portal_tokens"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    lead_id: Mapped[str] = mapped_column(ForeignKey("leads.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(255), index=True)  # SHA-256 of raw token
+    permissions: Mapped[list] = mapped_column(JSON, default=list)      # list of PortalPermission values
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    last_accessed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+class ESignatureRequest(Base, TimestampMixin):
+    """Request for a customer to e-sign a document (quote, contract, etc.)."""
+    __tablename__ = "esignature_requests"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    lead_id: Mapped[str | None] = mapped_column(ForeignKey("leads.id"), nullable=True, index=True)
+    document_type: Mapped[str] = mapped_column(String(100))   # "quote", "contract", "proposal"
+    document_id: Mapped[str | None] = mapped_column(String(100))
+    signer_name: Mapped[str] = mapped_column(String(200))
+    signer_email: Mapped[str] = mapped_column(String(255))
+    token_hash: Mapped[str] = mapped_column(String(255), index=True)
+    status: Mapped[ESignatureStatus] = mapped_column(Enum(ESignatureStatus), default=ESignatureStatus.pending, index=True)
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    declined_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    signer_ip: Mapped[str | None] = mapped_column(String(50))
+    signature_data: Mapped[str | None] = mapped_column(Text)   # base64 drawn signature or typed name
+
+class PaymentLink(Base, TimestampMixin):
+    """Payment link for a quote or invoice — optionally backed by Stripe."""
+    __tablename__ = "payment_links"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    lead_id: Mapped[str | None] = mapped_column(ForeignKey("leads.id"), nullable=True, index=True)
+    quote_id: Mapped[str | None] = mapped_column(ForeignKey("quotes.id"), nullable=True, index=True)
+    invoice_id: Mapped[str | None] = mapped_column(ForeignKey("invoices.id"), nullable=True, index=True)
+    amount: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(10), default="usd")
+    description: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[PaymentLinkStatus] = mapped_column(Enum(PaymentLinkStatus), default=PaymentLinkStatus.active, index=True)
+    stripe_payment_intent_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    stripe_checkout_url: Mapped[str | None] = mapped_column(String(500))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+class StripeWebhookEvent(Base, TimestampMixin):
+    """Processed Stripe webhook events — stored for idempotency."""
+    __tablename__ = "stripe_webhook_events"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str | None] = mapped_column(String(100), index=True)
+    stripe_event_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(100), index=True)
+    processed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    payload_json: Mapped[dict] = mapped_column(JSON, default=dict)

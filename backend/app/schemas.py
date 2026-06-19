@@ -889,6 +889,216 @@ class AgentMemoryCreate(BaseModel):
     source: Optional[str] = None
 
 
+# -------- Phase 3: Sales & Revenue, Webhooks, API Keys, Sequences, Comms, Portal, Billing --------
+
+from app.models import (
+    WebhookDeliveryStatus, DripEnrollmentStatus, ScheduledMessageStatus,
+    CallDisposition, PortalPermission, ESignatureStatus, PaymentLinkStatus,
+)
+
+# Webhooks (outbound)
+class WebhookEndpointCreate(BaseModel):
+    url: str
+    events: list[str] = []
+    active: bool = True
+    description: Optional[str] = None
+
+class WebhookEndpointOut(WebhookEndpointCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    created_at: datetime
+    updated_at: datetime
+
+class WebhookDeliveryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    endpoint_id: str
+    event_type: str
+    status: WebhookDeliveryStatus
+    attempts: int
+    last_response_code: Optional[int] = None
+    last_response_body: Optional[str] = None
+    next_retry_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    created_at: datetime
+
+# API Keys
+class ApiKeyCreate(BaseModel):
+    name: str
+    scopes: list[str] = []
+    expires_at: Optional[datetime] = None
+
+class ApiKeyOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    name: str
+    key_prefix: str
+    scopes: list[str]
+    active: bool
+    last_used_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    created_at: datetime
+
+class ApiKeyCreatedOut(ApiKeyOut):
+    raw_key: str = ""
+
+# Drip Sequences
+class DripSequenceCreate(BaseModel):
+    name: str
+    channel: Channel = Channel.email
+    trigger: str = "manual"
+    active: bool = True
+    description: Optional[str] = None
+
+class DripSequenceOut(DripSequenceCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    created_at: datetime
+    updated_at: datetime
+
+class DripStepCreate(BaseModel):
+    position: int = 1
+    delay_hours: int = 24
+    subject: Optional[str] = None
+    message_template: str = ""
+
+class DripStepOut(DripStepCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    sequence_id: str
+    created_at: datetime
+    updated_at: datetime
+
+class DripEnrollmentCreate(BaseModel):
+    lead_id: str
+
+class DripEnrollmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    sequence_id: str
+    lead_id: str
+    status: DripEnrollmentStatus
+    current_step: int
+    next_send_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+
+# Scheduled Messages
+class ScheduledMessageCreate(BaseModel):
+    lead_id: Optional[str] = None
+    channel: Channel = Channel.email
+    subject: Optional[str] = None
+    content: str = ""
+    send_at: datetime
+
+class ScheduledMessageOut(ScheduledMessageCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    drip_enrollment_id: Optional[str] = None
+    status: ScheduledMessageStatus
+    sent_at: Optional[datetime] = None
+    error: Optional[str] = None
+    created_at: datetime
+
+# Call Logs
+class CallLogCreate(BaseModel):
+    lead_id: Optional[str] = None
+    direction: Direction = Direction.outbound
+    disposition: CallDisposition = CallDisposition.connected
+    duration_seconds: int = 0
+    recording_url: Optional[str] = None
+    notes: Optional[str] = None
+    started_at: Optional[datetime] = None
+
+class CallLogOut(CallLogCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    agent_user_id: Optional[str] = None
+    created_at: datetime
+
+# Email Templates
+class EmailTemplateCreate(BaseModel):
+    name: str
+    category: str = "general"
+    subject: str
+    body_html: str = ""
+    body_text: Optional[str] = None
+    variables: list[str] = []
+
+class EmailTemplateOut(EmailTemplateCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+# Portal
+class PortalTokenCreate(BaseModel):
+    lead_id: str
+    permissions: list[str] = []
+    ttl_hours: int = 72
+
+class PortalTokenOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    lead_id: str
+    permissions: list[str]
+    expires_at: datetime
+    active: bool
+    created_at: datetime
+
+class ESignatureRequestCreate(BaseModel):
+    lead_id: Optional[str] = None
+    document_type: str
+    document_id: Optional[str] = None
+    signer_name: str
+    signer_email: str
+
+class ESignatureRequestOut(ESignatureRequestCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    status: ESignatureStatus
+    signed_at: Optional[datetime] = None
+    expires_at: datetime
+    created_at: datetime
+
+class ESignatureCompleteIn(BaseModel):
+    sign_token: str
+    signature_data: str
+
+# Billing
+class PaymentLinkCreate(BaseModel):
+    amount_cents: int
+    currency: str = "usd"
+    description: str = "Payment"
+    invoice_id: Optional[str] = None
+    quote_id: Optional[str] = None
+
+class PaymentLinkOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    invoice_id: Optional[str] = None
+    quote_id: Optional[str] = None
+    amount: float
+    currency: str
+    status: PaymentLinkStatus
+    stripe_checkout_url: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    created_at: datetime
+
+
 # Maps resource slug → (CreateSchema, UpdateSchema | None)
 # Used by enterprise.py to validate payloads before writing to the DB.
 ENTERPRISE_SCHEMAS: dict[str, type[BaseModel]] = {

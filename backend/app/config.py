@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     # AI execution backend. "local" = deterministic simulator, "openclaw" = external OpenClaw runtime.
     agent_executor: str = "local"
 
+    # Stripe billing
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_default_org_id: str = ""
+
+    # Public URL used in redirect links (e.g. Stripe success_url)
+    app_base_url: str = "http://localhost:8000"
+
     # Worker / queue settings.
     worker_enabled: bool = True
     worker_poll_seconds: int = 5

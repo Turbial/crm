@@ -45,6 +45,53 @@ def _log_status_change(lead, old_status, new_status, db=None, **kwargs):
 
 
 @events.on("lead.status_changed")
+def _fire_outbound_webhooks_on_lead(lead, old_status, new_status, **kwargs):
+    """Queue outbound webhook deliveries when a lead status changes."""
+    try:
+        from app.database import SessionLocal
+        from app.services.webhook_delivery import queue_deliveries
+        from app.tasks.webhook_tasks import dispatch_webhook_delivery
+        db = SessionLocal()
+        try:
+            payload = {
+                "lead_id": lead.id,
+                "old_status": str(old_status),
+                "new_status": str(new_status),
+            }
+            deliveries = queue_deliveries(db, lead.organization_id, "lead.status_changed", payload)
+            for d in deliveries:
+                dispatch_webhook_delivery(d.id)
+        finally:
+            db.close()
+    except Exception:
+        logger.warning("Outbound webhook dispatch failed for lead.status_changed on lead %s", lead.id)
+
+
+@events.on("agent_action.created")
+def _fire_outbound_webhooks_on_action(action, **kwargs):
+    """Queue outbound webhook deliveries when an agent action is created."""
+    try:
+        from app.database import SessionLocal
+        from app.services.webhook_delivery import queue_deliveries
+        from app.tasks.webhook_tasks import dispatch_webhook_delivery
+        db = SessionLocal()
+        try:
+            payload = {
+                "action_id": action.id,
+                "agent_name": action.agent_name,
+                "action_type": action.action_type,
+                "lead_id": action.lead_id,
+            }
+            deliveries = queue_deliveries(db, action.organization_id, "agent_action.created", payload)
+            for d in deliveries:
+                dispatch_webhook_delivery(d.id)
+        finally:
+            db.close()
+    except Exception:
+        logger.warning("Outbound webhook dispatch failed for agent_action.created on action %s", action.id)
+
+
+@events.on("lead.status_changed")
 def _trigger_workflow_on_status(lead, new_status, db=None, **kwargs):
     """Queue agent actions for active workflows whose trigger matches the new status."""
     if db is None:

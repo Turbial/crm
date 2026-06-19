@@ -11,12 +11,17 @@ from app.middleware.security_headers import SecurityHeadersMiddleware
 import app.services.event_handlers  # noqa: F401 — registers event handlers as a side effect
 from app.routers import (
     agents,
+    analytics,
+    api_keys,
     appointments,
     auth,
+    billing,
+    call_logs,
     campaigns,
     communications,
     contacts,
     dashboard,
+    email_templates,
     enterprise,
     inbox,
     integrations,
@@ -29,12 +34,16 @@ from app.routers import (
     opportunities,
     organizations,
     pm_advanced,
+    portal,
     products_services,
     projects,
     quotes,
     reviews,
+    scheduled_messages,
+    sequences,
     tasks,
     webhooks,
+    webhooks_out,
     workflow_runtime,
     workflows,
 )
@@ -114,6 +123,16 @@ def create_app() -> FastAPI:
         projects.router,
         pm_advanced.router,
         kanban.router,
+        # Phase 3: tripled functionalities
+        analytics.router,
+        api_keys.router,
+        billing.router,
+        call_logs.router,
+        email_templates.router,
+        portal.router,
+        scheduled_messages.router,
+        sequences.router,
+        webhooks_out.router,
     ]:
         app.include_router(router)
 
