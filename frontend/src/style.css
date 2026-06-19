@@ -18,3 +18,41 @@
 .cardActions button { font-size:11px; padding:5px 7px; border-radius:8px; }
 @media (max-width: 1100px) { .kanban { grid-template-columns: repeat(3, minmax(220px, 1fr)); } }
 @media (max-width: 760px) { .kanban { grid-template-columns: 1fr; } .boardHeader { align-items:stretch; flex-direction:column; } }
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+.tabBar { display:flex; gap:6px; margin:22px 0 18px; border-bottom:2px solid #e5e7eb; padding-bottom:0; }
+.tabBar button { background:transparent; color:#6b7280; border:0; border-radius:10px 10px 0 0; padding:10px 18px; font-size:14px; font-weight:500; cursor:pointer; transition:all .15s; border-bottom:2px solid transparent; margin-bottom:-2px; }
+.tabBar button:hover { color:#111827; background:#f9fafb; }
+.tabBar button.active { color:#111827; background:white; border-color:#111827; }
+
+/* ── Phase 3 shared ──────────────────────────────────────────────────────── */
+.phase3Panel { background:white; border:1px solid #e5e7eb; border-radius:18px; padding:24px; box-shadow:0 10px 30px #00000008; margin-top:0; }
+.panelHeader { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.panelHeader h2 { margin:0; font-size:22px; }
+.statGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom:24px; }
+.statCard { background:#f8fafc; border:1px solid #e5e7eb; border-radius:14px; padding:14px 16px; }
+.statCard span { display:block; color:#6b7280; font-size:12px; text-transform:capitalize; margin-bottom:4px; }
+.statCard strong { font-size:28px; }
+.columns3 { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:4px; }
+.columns3 h3 { margin:0 0 10px; font-size:15px; color:#374151; }
+.listItem { padding:9px 0; border-bottom:1px solid #f1f5f9; font-size:14px; }
+.listItem:last-child { border-bottom:0; }
+.empty { color:#9ca3af; font-size:14px; font-style:italic; margin:12px 0; }
+.toast { background:#d1fae5; color:#065f46; border-radius:10px; padding:10px 14px; font-size:14px; margin-bottom:16px; }
+.toast.error { background:#fee2e2; color:#991b1b; }
+
+/* ── Daily Brief ─────────────────────────────────────────────────────────── */
+.briefSections { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; margin-top:4px; }
+.briefSection { background:#f8fafc; border:1px solid #e5e7eb; border-radius:14px; padding:14px; }
+.briefSection h4 { margin:0 0 8px; font-size:14px; color:#374151; text-transform:capitalize; }
+
+/* ── Duplicates table ────────────────────────────────────────────────────── */
+.dupTable { width:100%; border-collapse:collapse; font-size:14px; margin-top:4px; }
+.dupTable th { text-align:left; padding:10px 12px; background:#f8fafc; border-bottom:2px solid #e5e7eb; font-size:13px; color:#374151; }
+.dupTable td { padding:10px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.dupTable tr:last-child td { border-bottom:0; }
+.dupTable code { background:#f1f5f9; border-radius:6px; padding:2px 6px; font-size:12px; }
+button.sm { padding:5px 10px; font-size:12px; border-radius:8px; margin-right:6px; }
+button.sm.danger { background:#dc2626; }
+
+@media (max-width:900px) { .columns3 { grid-template-columns:1fr; } .briefSections { grid-template-columns:1fr; } }
