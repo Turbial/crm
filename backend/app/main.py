@@ -60,6 +60,12 @@ from app.routers import (
     conversations,
     messenger_ai,
     intent_routes,
+    # Phase 3: AI Operations Platform
+    supervisor,
+    daily_brief,
+    duplicates,
+    sla_rules,
+    record_permissions,
 )
 
 
@@ -167,6 +173,12 @@ def create_app() -> FastAPI:
         conversations.router,
         messenger_ai.router,
         intent_routes.router,
+        # Phase 3: AI Operations Platform
+        supervisor.router,
+        daily_brief.router,
+        duplicates.router,
+        sla_rules.router,
+        record_permissions.router,
     ]:
         app.include_router(router)
 

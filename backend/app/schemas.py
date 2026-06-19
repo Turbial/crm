@@ -1437,6 +1437,72 @@ class MessengerChatOut(BaseModel):
     card: dict[str, Any] = {}
 
 
+# ── Phase 3: AI Operations Platform ──────────────────────────────────────────
+
+class DuplicateCandidateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    entity_type: str
+    entity_id_a: str
+    entity_id_b: str
+    score: float
+    matched_fields: list[str]
+    status: str
+    resolved_by_user_id: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+class SLARuleCreate(BaseModel):
+    name: str
+    entity_type: str
+    sla_hours: float
+    condition_json: dict[str, Any] = {}
+    escalate_to_user_id: Optional[str] = None
+    escalate_via: str = "notification"
+    action_on_breach: str = "notify"
+    escalation_action_key: Optional[str] = None
+
+class SLARuleOut(SLARuleCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+class RecordPermissionCreate(BaseModel):
+    permission: str
+    user_id: Optional[str] = None
+    role: Optional[str] = None
+    expires_at: Optional[datetime] = None
+
+class RecordPermissionOut(RecordPermissionCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    entity_type: str
+    entity_id: str
+    granted_by_user_id: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+class DailyBriefOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    user_id: Optional[str] = None
+    brief_date: datetime
+    sections: dict[str, Any]
+    summary_text: Optional[str] = None
+    status: str
+    delivered_at: Optional[datetime] = None
+    metadata_json: dict[str, Any] = {}
+    created_at: datetime
+    updated_at: datetime
+
+
 # Maps resource slug → (CreateSchema, UpdateSchema | None)
 # Used by enterprise.py to validate payloads before writing to the DB.
 ENTERPRISE_SCHEMAS: dict[str, type[BaseModel]] = {

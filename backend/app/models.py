@@ -1465,3 +1465,72 @@ class DuplicateCandidate(Base, TimestampMixin):
     merged_into_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     resolved_by_user_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# ============================================================
+# Phase 3 — AI Operations Platform
+# ============================================================
+
+class EscalateVia(str, enum.Enum):
+    messenger = "messenger"
+    email = "email"
+    notification = "notification"
+
+class BreachAction(str, enum.Enum):
+    notify = "notify"
+    escalate = "escalate"
+    auto_execute = "auto_execute"
+
+class SLARule(Base, TimestampMixin):
+    """Org-level SLA configuration — defines time limits and escalation for entity types."""
+    __tablename__ = "sla_rules"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    entity_type: Mapped[str] = mapped_column(String(50), index=True)
+    condition_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    sla_hours: Mapped[float] = mapped_column(Float, default=24.0)
+    escalate_to_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    escalate_via: Mapped[EscalateVia] = mapped_column(Enum(EscalateVia), default=EscalateVia.notification)
+    action_on_breach: Mapped[BreachAction] = mapped_column(Enum(BreachAction), default=BreachAction.notify)
+    escalation_action_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class PermissionLevel(str, enum.Enum):
+    view = "view"
+    edit = "edit"
+    delete = "delete"
+    admin = "admin"
+
+class RecordPermission(Base, TimestampMixin):
+    """Fine-grained per-record permission grants."""
+    __tablename__ = "record_permissions"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(String(100), index=True)
+    entity_type: Mapped[str] = mapped_column(String(50), index=True)
+    entity_id: Mapped[str] = mapped_column(String(100), index=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    permission: Mapped[PermissionLevel] = mapped_column(Enum(PermissionLevel), index=True)
+    granted_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class DailyBriefStatus(str, enum.Enum):
+    generated = "generated"
+    delivered = "delivered"
+    failed = "failed"
+
+class DailyBrief(Base, TimestampMixin):
+    """Generated morning brief for an org/user."""
+    __tablename__ = "daily_briefs"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    brief_date: Mapped[datetime] = mapped_column(DateTime, index=True)
+    sections: Mapped[dict] = mapped_column(JSON, default=dict)
+    summary_text: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[DailyBriefStatus] = mapped_column(Enum(DailyBriefStatus), default=DailyBriefStatus.generated)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
