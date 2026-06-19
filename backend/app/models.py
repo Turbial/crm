@@ -492,6 +492,7 @@ class Notification(Base, TimestampMixin):
     body: Mapped[str | None] = mapped_column(Text)
     read: Mapped[bool] = mapped_column(Boolean, default=False)
     action_url: Mapped[str | None] = mapped_column(String(500))
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
 class AutomationRun(Base, TimestampMixin):
     __tablename__ = "automation_runs"
@@ -1148,3 +1149,306 @@ class StripeWebhookEvent(Base, TimestampMixin):
     event_type: Mapped[str] = mapped_column(String(100), index=True)
     processed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     payload_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+# ============================================================
+# Phase 1 — CRM/PM Operating Surfaces
+# ============================================================
+
+class Company(Base, TimestampMixin):
+    """B2B company entity. Leads, contacts, and deals belong to companies."""
+    __tablename__ = "companies"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    name: Mapped[str] = mapped_column(String(300), index=True)
+    domain: Mapped[str | None] = mapped_column(String(255), index=True)
+    industry: Mapped[str | None] = mapped_column(String(100))
+    size: Mapped[str | None] = mapped_column(String(50))   # "1-10", "11-50", "51-200", etc.
+    website: Mapped[str | None] = mapped_column(String(500))
+    phone: Mapped[str | None] = mapped_column(String(50))
+    address: Mapped[str | None] = mapped_column(String(500))
+    city: Mapped[str | None] = mapped_column(String(100))
+    state: Mapped[str | None] = mapped_column(String(100))
+    country: Mapped[str | None] = mapped_column(String(100))
+    owner_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    tags: Mapped[list] = mapped_column(JSON, default=list)
+    custom_data: Mapped[dict] = mapped_column(JSON, default=dict)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class PipelineStage(Base, TimestampMixin):
+    """Configurable stage within a named pipeline."""
+    __tablename__ = "pipeline_stages"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    pipeline_id: Mapped[str] = mapped_column(ForeignKey("pipelines.id"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    position: Mapped[int] = mapped_column(Integer, default=1)
+    probability_default: Mapped[int] = mapped_column(Integer, default=25)
+    color: Mapped[str | None] = mapped_column(String(20))    # hex color
+    is_won_stage: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_lost_stage: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Deal(Base, TimestampMixin):
+    """First-class deal entity with full pipeline context."""
+    __tablename__ = "deals"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    lead_id: Mapped[str | None] = mapped_column(ForeignKey("leads.id"), nullable=True, index=True)
+    contact_id: Mapped[str | None] = mapped_column(ForeignKey("contacts.id"), nullable=True, index=True)
+    company_id: Mapped[str | None] = mapped_column(ForeignKey("companies.id"), nullable=True, index=True)
+    pipeline_id: Mapped[str | None] = mapped_column(ForeignKey("pipelines.id"), nullable=True, index=True)
+    stage_id: Mapped[str | None] = mapped_column(ForeignKey("pipeline_stages.id"), nullable=True, index=True)
+    value: Mapped[float] = mapped_column(Float, default=0)
+    probability: Mapped[int] = mapped_column(Integer, default=25)
+    currency: Mapped[str] = mapped_column(String(10), default="usd")
+    expected_close_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    owner_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    source: Mapped[str | None] = mapped_column(String(100))
+    lost_reason: Mapped[str | None] = mapped_column(String(500))
+    tags: Mapped[list] = mapped_column(JSON, default=list)
+    custom_data: Mapped[dict] = mapped_column(JSON, default=dict)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class TimelineEvent(Base):
+    """Unified activity timeline — one row per significant business event on any entity."""
+    __tablename__ = "timeline_events"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(String(100), index=True)
+    entity_type: Mapped[str] = mapped_column(String(50), index=True)   # lead/deal/contact/company/project/task
+    entity_id: Mapped[str] = mapped_column(String(100), index=True)
+    event_type: Mapped[str] = mapped_column(String(100), index=True)
+    actor_type: Mapped[str] = mapped_column(String(20), default="system")  # human/agent/system/api/customer
+    actor_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    actor_name: Mapped[str | None] = mapped_column(String(200))
+    summary: Mapped[str] = mapped_column(Text)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class CustomFieldDefinition(Base, TimestampMixin):
+    """Org-level custom field definitions per entity type."""
+    __tablename__ = "custom_field_definitions"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    entity_type: Mapped[str] = mapped_column(String(50), index=True)   # lead/deal/contact/company/project/task
+    name: Mapped[str] = mapped_column(String(100))
+    key: Mapped[str] = mapped_column(String(100), index=True)    # snake_case identifier
+    field_type: Mapped[str] = mapped_column(String(30))   # text/number/date/select/multi_select/checkbox/url/email/phone
+    options: Mapped[list] = mapped_column(JSON, default=list)    # for select/multi_select types
+    required: Mapped[bool] = mapped_column(Boolean, default=False)
+    position: Mapped[int] = mapped_column(Integer, default=1)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class FileAttachment(Base, TimestampMixin):
+    """General file attachment for any entity."""
+    __tablename__ = "file_attachments"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    entity_type: Mapped[str] = mapped_column(String(50), index=True)
+    entity_id: Mapped[str] = mapped_column(String(100), index=True)
+    uploaded_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    name: Mapped[str] = mapped_column(String(300))
+    mime_type: Mapped[str | None] = mapped_column(String(100))
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    storage_url: Mapped[str] = mapped_column(String(1000))
+    thumbnail_url: Mapped[str | None] = mapped_column(String(1000))
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class ActionStatus(str, enum.Enum):
+    pending = "pending"
+    running = "running"
+    waiting_approval = "waiting_approval"
+    completed = "completed"
+    failed = "failed"
+    cancelled = "cancelled"
+    retrying = "retrying"
+
+
+class ActionApprovalStatus(str, enum.Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+    expired = "expired"
+
+
+class RiskLevel(str, enum.Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+    critical = "critical"
+
+
+class ActionDefinition(Base, TimestampMixin):
+    """Registry of all executable system and org-level actions."""
+    __tablename__ = "action_definitions"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)  # null = system
+    action_key: Mapped[str] = mapped_column(String(100), index=True)   # e.g. "crm.create_lead"
+    display_name: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[str] = mapped_column(String(50), index=True)   # crm/pm/billing/messaging/portal/automation
+    input_schema: Mapped[dict] = mapped_column(JSON, default=dict)
+    output_schema: Mapped[dict] = mapped_column(JSON, default=dict)
+    required_role: Mapped[str] = mapped_column(String(50), default="employee")
+    approval_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    destructive: Mapped[bool] = mapped_column(Boolean, default=False)
+    idempotent: Mapped[bool] = mapped_column(Boolean, default=True)
+    timeout_seconds: Mapped[int] = mapped_column(Integer, default=60)
+    retry_policy: Mapped[dict] = mapped_column(JSON, default=dict)
+    owning_service: Mapped[str | None] = mapped_column(String(100))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ActionRun(Base, TimestampMixin):
+    """Operational ledger — every action execution creates one row."""
+    __tablename__ = "action_runs"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(String(100), index=True)
+    action_key: Mapped[str] = mapped_column(String(100), index=True)
+    source: Mapped[str] = mapped_column(String(50), index=True)   # messenger/api/workflow/agent/webhook/ui
+    source_message_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    requested_by_type: Mapped[str] = mapped_column(String(20), default="human")  # human/agent/system/api
+    requested_by_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    actor_type: Mapped[str] = mapped_column(String(20), default="system")
+    actor_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    linked_entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    linked_entity_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    input_payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    output_payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[ActionStatus] = mapped_column(Enum(ActionStatus), default=ActionStatus.pending, index=True)
+    approval_status: Mapped[ActionApprovalStatus | None] = mapped_column(Enum(ActionApprovalStatus), nullable=True)
+    current_step: Mapped[int] = mapped_column(Integer, default=0)
+    logs: Mapped[list] = mapped_column(JSON, default=list)
+    artifacts: Mapped[list] = mapped_column(JSON, default=list)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retries: Mapped[int] = mapped_column(Integer, default=0)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class ApprovalRequest(Base, TimestampMixin):
+    """First-class approval — decoupled from any specific entity type."""
+    __tablename__ = "approval_requests"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(String(100), index=True)
+    action_run_id: Mapped[str | None] = mapped_column(ForeignKey("action_runs.id"), nullable=True, index=True)
+    entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    entity_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    requested_by_type: Mapped[str] = mapped_column(String(20), default="agent")
+    requested_by_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    approver_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str | None] = mapped_column(Text)
+    proposed_change: Mapped[dict] = mapped_column(JSON, default=dict)
+    risk_level: Mapped[RiskLevel] = mapped_column(Enum(RiskLevel), default=RiskLevel.medium, index=True)
+    status: Mapped[ActionApprovalStatus] = mapped_column(Enum(ActionApprovalStatus), default=ActionApprovalStatus.pending, index=True)
+    decision_note: Mapped[str | None] = mapped_column(Text)
+    comments: Mapped[list] = mapped_column(JSON, default=list)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# ============================================================
+# Phase 2 — Messenger & Conversation Core
+# ============================================================
+
+class ConversationStatus(str, enum.Enum):
+    open = "open"
+    pending = "pending"
+    resolved = "resolved"
+    snoozed = "snoozed"
+
+
+class ConversationChannel(str, enum.Enum):
+    messenger = "messenger"
+    sms = "sms"
+    email = "email"
+    whatsapp = "whatsapp"
+    telegram = "telegram"
+    web = "web"
+    internal = "internal"
+
+
+class Conversation(Base, TimestampMixin):
+    """Omnichannel conversation container."""
+    __tablename__ = "conversations"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    channel: Mapped[ConversationChannel] = mapped_column(Enum(ConversationChannel), default=ConversationChannel.internal, index=True)
+    external_thread_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    lead_id: Mapped[str | None] = mapped_column(ForeignKey("leads.id"), nullable=True, index=True)
+    contact_id: Mapped[str | None] = mapped_column(ForeignKey("contacts.id"), nullable=True, index=True)
+    company_id: Mapped[str | None] = mapped_column(ForeignKey("companies.id"), nullable=True, index=True)
+    assigned_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    status: Mapped[ConversationStatus] = mapped_column(Enum(ConversationStatus), default=ConversationStatus.open, index=True)
+    priority: Mapped[str] = mapped_column(String(20), default="normal")   # low/normal/high/urgent
+    subject: Mapped[str | None] = mapped_column(String(300))
+    sla_due_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class ConversationMessage(Base, TimestampMixin):
+    """Individual message in a conversation thread."""
+    __tablename__ = "conversation_messages"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
+    sender_type: Mapped[str] = mapped_column(String(20), index=True)   # human/agent/customer/system
+    sender_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    sender_name: Mapped[str | None] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text)
+    body_html: Mapped[str | None] = mapped_column(Text)
+    attachments: Mapped[list] = mapped_column(JSON, default=list)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ConversationState(Base):
+    """Short-term AI memory per conversation — intent and entity context."""
+    __tablename__ = "conversation_states"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(String(100), index=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), unique=True, index=True)
+    current_intent: Mapped[str | None] = mapped_column(String(100))
+    active_entity_type: Mapped[str | None] = mapped_column(String(50))
+    active_entity_id: Mapped[str | None] = mapped_column(String(100))
+    pending_action_key: Mapped[str | None] = mapped_column(String(100))
+    pending_action_payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    last_mentioned_contact_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_mentioned_project_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    unresolved_fields: Mapped[dict] = mapped_column(JSON, default=dict)
+    context_window: Mapped[list] = mapped_column(JSON, default=list)   # last N messages for context
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class DuplicateStatus(str, enum.Enum):
+    pending = "pending"
+    merged = "merged"
+    dismissed = "dismissed"
+
+
+class DuplicateCandidate(Base, TimestampMixin):
+    """Flagged potential duplicate record pairs."""
+    __tablename__ = "duplicate_candidates"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(String(100), index=True)
+    entity_type: Mapped[str] = mapped_column(String(50), index=True)
+    entity_id: Mapped[str] = mapped_column(String(100), index=True)
+    candidate_id: Mapped[str] = mapped_column(String(100), index=True)
+    score: Mapped[float] = mapped_column(Float)   # 0.0–1.0 similarity
+    match_reasons: Mapped[list] = mapped_column(JSON, default=list)   # ["same_email", "similar_name"]
+    status: Mapped[DuplicateStatus] = mapped_column(Enum(DuplicateStatus), default=DuplicateStatus.pending, index=True)
+    merged_into_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    resolved_by_user_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

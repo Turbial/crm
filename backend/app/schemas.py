@@ -1099,6 +1099,208 @@ class PaymentLinkOut(BaseModel):
     created_at: datetime
 
 
+# -------- Phase 1: CRM/PM Operating Surfaces --------
+
+from app.models import ActionStatus, ActionApprovalStatus, RiskLevel
+
+class CompanyCreate(BaseModel):
+    name: str
+    domain: Optional[str] = None
+    industry: Optional[str] = None
+    size: Optional[str] = None
+    website: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
+class CompanyUpdate(BaseModel):
+    name: Optional[str] = None
+    domain: Optional[str] = None
+    industry: Optional[str] = None
+    size: Optional[str] = None
+    website: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
+class CompanyOut(CompanyCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    owner_user_id: Optional[str] = None
+    tags: list[Any] = []
+    custom_data: dict[str, Any] = {}
+    created_at: datetime
+    updated_at: datetime
+
+class DealCreate(BaseModel):
+    title: str
+    lead_id: Optional[str] = None
+    contact_id: Optional[str] = None
+    company_id: Optional[str] = None
+    pipeline_id: Optional[str] = None
+    stage_id: Optional[str] = None
+    value: float = 0
+    probability: int = 25
+    currency: str = "usd"
+    expected_close_date: Optional[datetime] = None
+    owner_user_id: Optional[str] = None
+    source: Optional[str] = None
+    tags: list[Any] = []
+
+class DealUpdate(BaseModel):
+    title: Optional[str] = None
+    lead_id: Optional[str] = None
+    contact_id: Optional[str] = None
+    company_id: Optional[str] = None
+    pipeline_id: Optional[str] = None
+    stage_id: Optional[str] = None
+    value: Optional[float] = None
+    probability: Optional[int] = None
+    currency: Optional[str] = None
+    expected_close_date: Optional[datetime] = None
+    owner_user_id: Optional[str] = None
+    source: Optional[str] = None
+    lost_reason: Optional[str] = None
+    tags: Optional[list[Any]] = None
+
+class DealOut(DealCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    lost_reason: Optional[str] = None
+    custom_data: dict[str, Any] = {}
+    closed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+class TimelineEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    entity_type: str
+    entity_id: str
+    event_type: str
+    actor_type: str
+    actor_id: Optional[str] = None
+    actor_name: Optional[str] = None
+    summary: str
+    metadata_json: dict[str, Any] = {}
+    occurred_at: datetime
+    created_at: datetime
+
+class CustomFieldCreate(BaseModel):
+    entity_type: str
+    name: str
+    key: str
+    field_type: str = "text"
+    options: list[Any] = []
+    required: bool = False
+    position: int = 1
+    active: bool = True
+
+class CustomFieldOut(CustomFieldCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    created_at: datetime
+    updated_at: datetime
+
+class FileAttachmentCreate(BaseModel):
+    entity_type: str
+    entity_id: str
+    name: str
+    mime_type: Optional[str] = None
+    size_bytes: int = 0
+    storage_url: str
+    thumbnail_url: Optional[str] = None
+    is_public: bool = False
+
+class FileAttachmentOut(FileAttachmentCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    uploaded_by_user_id: Optional[str] = None
+    metadata_json: dict[str, Any] = {}
+    created_at: datetime
+    updated_at: datetime
+
+class ActionDefinitionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: Optional[str] = None
+    action_key: str
+    display_name: str
+    description: Optional[str] = None
+    category: str
+    required_role: str
+    approval_required: bool
+    destructive: bool
+    idempotent: bool
+    active: bool
+
+class ActionRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    action_key: str
+    source: str
+    requested_by_type: str
+    requested_by_id: Optional[str] = None
+    linked_entity_type: Optional[str] = None
+    linked_entity_id: Optional[str] = None
+    input_payload: dict[str, Any] = {}
+    output_payload: dict[str, Any] = {}
+    status: ActionStatus
+    approval_status: Optional[ActionApprovalStatus] = None
+    logs: list[Any] = []
+    error: Optional[str] = None
+    retries: int = 0
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+class ApprovalRequestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    action_run_id: Optional[str] = None
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    requested_by_type: str
+    requested_by_id: Optional[str] = None
+    approver_user_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    proposed_change: dict[str, Any] = {}
+    risk_level: RiskLevel
+    status: ActionApprovalStatus
+    decision_note: Optional[str] = None
+    due_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
+    rejected_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+class NotificationHubOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    user_id: Optional[str] = None
+    title: str
+    body: Optional[str] = None
+    read: bool
+    action_url: Optional[str] = None
+    metadata_json: dict[str, Any] = {}
+    created_at: datetime
+    updated_at: datetime
+
+
 # Maps resource slug → (CreateSchema, UpdateSchema | None)
 # Used by enterprise.py to validate payloads before writing to the DB.
 ENTERPRISE_SCHEMAS: dict[str, type[BaseModel]] = {

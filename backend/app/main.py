@@ -46,6 +46,16 @@ from app.routers import (
     webhooks_out,
     workflow_runtime,
     workflows,
+    # Phase 1: CRM/PM Operating Surfaces
+    companies,
+    deals,
+    timeline,
+    search,
+    custom_fields,
+    file_attachments,
+    action_runs,
+    approvals,
+    notifications_hub,
 )
 
 
@@ -56,6 +66,10 @@ def create_app() -> FastAPI:
     if settings.auto_create_tables:
         # Local/dev convenience. In production set AUTO_CREATE_TABLES=false and run Alembic.
         Base.metadata.create_all(bind=engine)
+        from app.database import SessionLocal
+        from app.services.action_registry import seed_system_actions
+        with SessionLocal() as _db:
+            seed_system_actions(_db)
 
     app = FastAPI(
         title="Mighty CRM API",
@@ -133,6 +147,16 @@ def create_app() -> FastAPI:
         scheduled_messages.router,
         sequences.router,
         webhooks_out.router,
+        # Phase 1: CRM/PM Operating Surfaces
+        companies.router,
+        deals.router,
+        timeline.router,
+        search.router,
+        custom_fields.router,
+        file_attachments.router,
+        action_runs.router,
+        approvals.router,
+        notifications_hub.router,
     ]:
         app.include_router(router)
 
