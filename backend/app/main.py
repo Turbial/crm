@@ -56,6 +56,10 @@ from app.routers import (
     action_runs,
     approvals,
     notifications_hub,
+    # Phase 2: Messenger & Action Core
+    conversations,
+    messenger_ai,
+    intent_routes,
 )
 
 
@@ -68,8 +72,10 @@ def create_app() -> FastAPI:
         Base.metadata.create_all(bind=engine)
         from app.database import SessionLocal
         from app.services.action_registry import seed_system_actions
+        from app.services.intent_route_seeder import seed_intent_routes
         with SessionLocal() as _db:
             seed_system_actions(_db)
+            seed_intent_routes(_db)
 
     app = FastAPI(
         title="Mighty CRM API",
@@ -157,6 +163,10 @@ def create_app() -> FastAPI:
         action_runs.router,
         approvals.router,
         notifications_hub.router,
+        # Phase 2: Messenger & Action Core
+        conversations.router,
+        messenger_ai.router,
+        intent_routes.router,
     ]:
         app.include_router(router)
 

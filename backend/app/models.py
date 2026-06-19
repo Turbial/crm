@@ -1432,6 +1432,19 @@ class ConversationState(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class IntentRoute(Base, TimestampMixin):
+    """Maps a classified intent to a target action key and surface."""
+    __tablename__ = "intent_routes"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uid)
+    organization_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)  # null = system
+    intent_pattern: Mapped[str] = mapped_column(String(100), index=True)   # e.g. "create_project"
+    action_key: Mapped[str] = mapped_column(String(100))                   # e.g. "pm.create_project"
+    target_surface: Mapped[str] = mapped_column(String(50), default="crm")  # crm/pm/billing/messaging/portal
+    confidence_threshold: Mapped[float] = mapped_column(Float, default=0.6)
+    require_confirmation: Mapped[bool] = mapped_column(Boolean, default=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
 class DuplicateStatus(str, enum.Enum):
     pending = "pending"
     merged = "merged"

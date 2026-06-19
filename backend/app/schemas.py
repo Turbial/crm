@@ -1301,6 +1301,142 @@ class NotificationHubOut(BaseModel):
     updated_at: datetime
 
 
+# -------- Phase 2: Messenger & Action Core --------
+
+from app.models import ConversationStatus, ConversationChannel
+
+class ConversationCreate(BaseModel):
+    channel: str = "internal"
+    lead_id: Optional[str] = None
+    contact_id: Optional[str] = None
+    company_id: Optional[str] = None
+    assigned_user_id: Optional[str] = None
+    subject: Optional[str] = None
+    priority: str = "normal"
+    external_thread_id: Optional[str] = None
+
+class ConversationUpdate(BaseModel):
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    subject: Optional[str] = None
+    assigned_user_id: Optional[str] = None
+    lead_id: Optional[str] = None
+    contact_id: Optional[str] = None
+    company_id: Optional[str] = None
+
+class ConversationOut(ConversationCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    status: str
+    sla_due_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+class ConversationMessageCreate(BaseModel):
+    body: str
+    body_html: Optional[str] = None
+
+class ConversationMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    conversation_id: str
+    sender_type: str
+    sender_id: Optional[str] = None
+    sender_name: Optional[str] = None
+    body: str
+    body_html: Optional[str] = None
+    attachments: list[Any] = []
+    metadata_json: dict[str, Any] = {}
+    sent_at: datetime
+    created_at: datetime
+
+class ConversationStateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: str
+    conversation_id: str
+    current_intent: Optional[str] = None
+    active_entity_type: Optional[str] = None
+    active_entity_id: Optional[str] = None
+    pending_action_key: Optional[str] = None
+    pending_action_payload: dict[str, Any] = {}
+    unresolved_fields: dict[str, Any] = {}
+    context_window: list[Any] = []
+    updated_at: datetime
+
+class IntentRouteCreate(BaseModel):
+    intent_pattern: str
+    action_key: str
+    target_surface: str = "crm"
+    confidence_threshold: float = 0.6
+    require_confirmation: bool = True
+    active: bool = True
+
+class IntentRouteOut(IntentRouteCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    organization_id: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+class MessengerClassifyIn(BaseModel):
+    text: str
+
+class MessengerClassifyOut(BaseModel):
+    intent: str
+    action_key: str
+    confidence: float
+    raw_entities: dict[str, Any] = {}
+    ambiguous: bool = False
+    alternatives: list[dict[str, Any]] = []
+
+class MessengerProposeIn(BaseModel):
+    text: str
+
+class MessengerProposeOut(BaseModel):
+    intent: str
+    action_key: str
+    confidence: float
+    linked_entities: dict[str, Any] = {}
+    proposed_payload: dict[str, Any] = {}
+    requires_approval: bool
+    missing_fields: list[str] = []
+    definition_display_name: Optional[str] = None
+    definition_category: Optional[str] = None
+
+class MessengerExecuteIn(BaseModel):
+    text: str
+    min_confidence: float = 0.65
+    payload_override: Optional[dict[str, Any]] = None
+
+class MessengerExecuteOut(BaseModel):
+    status: str
+    run_id: str
+    action_key: str
+    output: Optional[dict[str, Any]] = None
+    approval_id: Optional[str] = None
+    error: Optional[str] = None
+
+class MessengerChatIn(BaseModel):
+    text: str
+    conversation_id: Optional[str] = None
+    auto_execute: bool = False
+
+class MessengerChatOut(BaseModel):
+    conversation_id: str
+    user_message_id: str
+    assistant_message_id: str
+    assistant_text: str
+    intent: str
+    confidence: float
+    action_key: str
+    linked_entities: dict[str, Any] = {}
+    card: dict[str, Any] = {}
+
+
 # Maps resource slug → (CreateSchema, UpdateSchema | None)
 # Used by enterprise.py to validate payloads before writing to the DB.
 ENTERPRISE_SCHEMAS: dict[str, type[BaseModel]] = {
