@@ -1,0 +1,10 @@
+{
+  "name": "@turbile/crm-web",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo 'build web'",
+    "test": "echo 'test web'"
+  }
+}

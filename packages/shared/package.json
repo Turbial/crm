@@ -1,0 +1,10 @@
+{
+  "name": "@turbile/crm-shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo 'build shared'",
+    "test": "echo 'test shared'"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@turbile/crm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CRM — Pipeline management, campaign tracking, lead scoring, email integration",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "echo 'dev script placeholder'",
+    "build": "echo 'build script placeholder'",
+    "test": "echo 'test script placeholder'",
+    "lint": "echo 'lint script placeholder'"
+  },
+  "license": "UNLICENSED"
+}
