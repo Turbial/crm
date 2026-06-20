@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_from_number: str = ""
 
+    # AI / LLM
+    anthropic_api_key: str = ""
+    ai_model: str = "claude-sonnet-4-6"
+
     # File storage: "local" | "s3"
     storage_backend: str = "local"
     local_storage_path: str = "./uploads"

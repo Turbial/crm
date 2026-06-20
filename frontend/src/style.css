@@ -135,6 +135,7 @@ select.form-input { cursor: pointer; }
 /* ── Spinner ───────────────────────────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner { width: 22px; height: 22px; border: 2.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+.spinner-sm { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
 .spinner-center { display: flex; justify-content: center; align-items: center; padding: 48px; }
 
 /* ── Kanban ────────────────────────────────────────────────────────── */

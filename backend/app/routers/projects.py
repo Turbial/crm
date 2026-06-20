@@ -192,3 +192,95 @@ def decide_approval(project_id: str, approval_id: str, payload: ProjectApprovalU
             task.status = PMTaskStatus.done
     db.commit(); db.refresh(approval)
     return approval
+
+
+# ── AI Scoping ────────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+
+class AIScopeRequest(_BaseModel):
+    description: str
+    additional_context: str = ""
+
+class AIScopeApplyRequest(_BaseModel):
+    milestones: list[dict]
+
+
+@router.post("/{project_id}/ai-scope/preview")
+def ai_scope_preview(
+    project_id: str,
+    body: AIScopeRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Use AI to break down a project description into milestones and tasks.
+
+    Returns the proposed structure WITHOUT creating anything — let the user
+    review and deselect tasks before calling /ai-scope/apply.
+    """
+    project = ensure_project(db, user.organization_id, project_id)
+    if not body.description.strip():
+        raise HTTPException(status_code=422, detail="description is required")
+    from app.services.ai_scope_service import scope_project
+    result = scope_project(
+        project_name=project.name,
+        description=body.description,
+        additional_context=body.additional_context,
+    )
+    task_count = sum(len(m["tasks"]) for m in result["milestones"])
+    return {**result, "task_count": task_count, "milestone_count": len(result["milestones"])}
+
+
+@router.post("/{project_id}/ai-scope/apply")
+def ai_scope_apply(
+    project_id: str,
+    body: AIScopeApplyRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create milestones and tasks from an AI-scoped plan.
+
+    Accepts the milestones array from /ai-scope/preview (user may have removed tasks).
+    Returns counts of what was created.
+    """
+    from app.models import AssigneeType, ProjectPriority
+    ensure_project(db, user.organization_id, project_id)
+    milestones_created = 0
+    tasks_created = 0
+    priority_map = {"high": ProjectPriority.high, "medium": ProjectPriority.normal, "low": ProjectPriority.low}
+    for m_idx, m_def in enumerate(body.milestones, start=1):
+        milestone = ProjectMilestone(
+            organization_id=user.organization_id,
+            project_id=project_id,
+            name=str(m_def.get("name", f"Milestone {m_idx}"))[:255],
+            description=m_def.get("description") or None,
+            position=m_idx,
+            status=PMTaskStatus.ready,
+        )
+        db.add(milestone)
+        db.flush()
+        milestones_created += 1
+        for t_def in m_def.get("tasks", []):
+            priority = priority_map.get(t_def.get("priority", "medium"), ProjectPriority.normal)
+            task = PMTask(
+                organization_id=user.organization_id,
+                project_id=project_id,
+                milestone_id=milestone.id,
+                title=str(t_def.get("title", "Task"))[:255],
+                description=t_def.get("description") or None,
+                status=PMTaskStatus.ready,
+                priority=priority,
+                assignee_type=AssigneeType.agent,
+                assignee_agent=t_def.get("agent", "ManagerAgent"),
+                estimate_minutes=int(t_def.get("estimate_minutes", 60)),
+                requires_approval=bool(t_def.get("requires_approval", False)),
+                metadata_json={"source": "ai_scope"},
+            )
+            db.add(task)
+            tasks_created += 1
+    db.commit()
+    return {
+        "milestones_created": milestones_created,
+        "tasks_created": tasks_created,
+        "project_id": project_id,
+    }

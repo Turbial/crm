@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles } from 'lucide-react'
 import { get, patch, post } from '../../api'
 import Spinner from '../../components/Spinner'
 import Badge from '../../components/Badge'
 import KanbanBoard from '../../components/KanbanBoard'
 import Modal from '../../components/Modal'
+import AIScopeModal from '../../components/AIScopeModal'
 
 const COLUMNS = ['ready', 'in_progress', 'review', 'done']
 const PRIORITIES = ['low', 'medium', 'high', 'critical']
@@ -16,6 +17,7 @@ export default function ProjectBoard() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
+  const [showScope, setShowScope] = useState(false)
   const [form, setForm] = useState({ title: '', priority: 'medium', column_key: 'ready' })
 
   const { data: project } = useQuery({ queryKey: ['project', id], queryFn: () => get(`/projects/${id}`) })
@@ -60,6 +62,9 @@ export default function ProjectBoard() {
       <div className="flex items-center gap-3 mb-4">
         <button className="btn btn-ghost btn-icon" onClick={() => navigate('/pm/projects')}><ArrowLeft size={16} /></button>
         <h1 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>{project?.name || 'Project Board'}</h1>
+        <button className="btn btn-secondary btn-sm flex gap-1 items-center" onClick={() => setShowScope(true)}>
+          <Sparkles size={13} /> Scope with AI
+        </button>
         <button className="btn btn-primary btn-sm flex gap-1 items-center" onClick={() => setShowCreate(true)}>
           <Plus size={13} /> New Task
         </button>
@@ -95,6 +100,13 @@ export default function ProjectBoard() {
         </div>
         {createTask.isError && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{createTask.error?.message}</p>}
       </Modal>
+
+      <AIScopeModal
+        projectId={id}
+        kanbanQueryKey={['kanban', id]}
+        open={showScope}
+        onClose={() => setShowScope(false)}
+      />
     </div>
   )
 }
