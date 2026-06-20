@@ -3,12 +3,13 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Building2, Briefcase, FolderOpen,
   MessageSquare, Zap, CheckSquare, Bell, AlertTriangle,
-  FileText, Copy, LogOut, Settings, Search,
+  FileText, Copy, LogOut, Settings, Search, Sparkles,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { get } from '../api'
 import SearchModal from './SearchModal'
+import AICommandPanel from './AICommandPanel'
 
 const NAV = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
@@ -60,6 +61,7 @@ export default function AppShell({ title }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
@@ -69,11 +71,15 @@ export default function AppShell({ title }) {
   })
   const unreadCount = notifications.filter(n => !n.read).length
 
-  // ⌘K / Ctrl+K to open search
+  // ⌘K / Ctrl+K → search; ⌘J / Ctrl+J → AI panel
   const handleKeyDown = useCallback((e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault()
       setSearchOpen(true)
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
+      e.preventDefault()
+      setAiOpen(prev => !prev)
     }
   }, [])
 
@@ -132,8 +138,16 @@ export default function AppShell({ title }) {
               style={{ color: 'var(--text-muted)', fontSize: 13 }}
             >
               <Search size={15} />
-              <span style={{ display: 'none' }}>Search</span>
               <kbd style={{ fontSize: 10, background: 'var(--bg)', border: '1px solid var(--border-subtle)', borderRadius: 3, padding: '1px 4px' }}>⌘K</kbd>
+            </button>
+            <button
+              className="btn btn-ghost btn-sm flex gap-1 items-center"
+              onClick={() => setAiOpen(prev => !prev)}
+              title="AI Assistant (⌘J)"
+              style={{ color: aiOpen ? 'var(--accent)' : 'var(--text-muted)', fontSize: 13 }}
+            >
+              <Sparkles size={15} />
+              <kbd style={{ fontSize: 10, background: 'var(--bg)', border: '1px solid var(--border-subtle)', borderRadius: 3, padding: '1px 4px' }}>⌘J</kbd>
             </button>
 
             <NavLink to="/notifications" className="btn btn-ghost btn-icon btn-sm" style={{ position: 'relative' }} title="Notifications">
@@ -157,6 +171,7 @@ export default function AppShell({ title }) {
       </div>
 
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <AICommandPanel open={aiOpen} onClose={() => setAiOpen(false)} />
     </div>
   )
 }
