@@ -28,6 +28,8 @@ def create_endpoint(
         secret=secrets.token_hex(32),
         events=body.events,
         active=body.active,
+        description=body.description,
+        entity_filters=body.entity_filters,
     )
     db.add(ep)
     db.commit()
@@ -76,6 +78,8 @@ def update_endpoint(
     ep.url = str(body.url)
     ep.events = body.events
     ep.active = body.active
+    ep.description = body.description
+    ep.entity_filters = body.entity_filters
     db.commit()
     db.refresh(ep)
     return ep

@@ -938,6 +938,10 @@ class WebhookEndpoint(Base, TimestampMixin):
     events: Mapped[list] = mapped_column(JSON, default=list)   # e.g. ["lead.status_changed"]
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     description: Mapped[str | None] = mapped_column(String(255))
+    # Optional entity-level filters — only deliver when payload matches.
+    # Format: [{"entity_type": "lead", "entity_id": "abc123"}, ...]
+    # Empty list = no filter (receive all matching events).
+    entity_filters: Mapped[list] = mapped_column(JSON, default=list)
 
 class WebhookDelivery(Base, TimestampMixin):
     """Record of each outbound webhook attempt."""

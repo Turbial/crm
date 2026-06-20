@@ -27,6 +27,25 @@ def _sign_payload(secret: str, body: bytes, timestamp: str) -> str:
     return hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
 
 
+def _matches_entity_filters(filters: list, payload: dict) -> bool:
+    """Return True if payload passes the endpoint's entity filters.
+
+    Empty filter list = no restriction (deliver for all entities).
+    Non-empty list = at least one filter entry must match.
+    Each filter may specify entity_type and/or entity_id; omitted fields are wildcards.
+    """
+    if not filters:
+        return True
+    p_type = payload.get("entity_type")
+    p_id = payload.get("entity_id") or payload.get("lead_id") or payload.get("deal_id") or payload.get("contact_id")
+    for f in filters:
+        type_ok = not f.get("entity_type") or f.get("entity_type") == p_type
+        id_ok = not f.get("entity_id") or f.get("entity_id") == p_id
+        if type_ok and id_ok:
+            return True
+    return False
+
+
 def queue_deliveries(db: Session, org_id: str, event_type: str, payload: dict) -> list[WebhookDelivery]:
     """Create WebhookDelivery rows for all active endpoints subscribed to this event."""
     endpoints = (
@@ -38,6 +57,8 @@ def queue_deliveries(db: Session, org_id: str, event_type: str, payload: dict) -
     for ep in endpoints:
         subscribed = ep.events or []
         if event_type not in subscribed and "*" not in subscribed:
+            continue
+        if not _matches_entity_filters(ep.entity_filters or [], payload):
             continue
         delivery = WebhookDelivery(
             organization_id=org_id,

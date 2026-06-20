@@ -259,15 +259,18 @@ function Members() {
 }
 
 const ALL_SCOPES = [
-  { value: 'leads:read',     label: 'Leads — read' },
-  { value: 'leads:write',    label: 'Leads — write' },
-  { value: 'deals:read',     label: 'Deals — read' },
-  { value: 'deals:write',    label: 'Deals — write' },
-  { value: 'contacts:read',  label: 'Contacts — read' },
-  { value: 'actions:run',    label: 'Actions — run & list' },
-  { value: 'memory:read',    label: 'Memory — read' },
-  { value: 'memory:write',   label: 'Memory — write' },
-  { value: 'analytics:read', label: 'Analytics — read' },
+  { value: 'leads:read',       label: 'Leads — read' },
+  { value: 'leads:write',      label: 'Leads — write' },
+  { value: 'deals:read',       label: 'Deals — read' },
+  { value: 'deals:write',      label: 'Deals — write' },
+  { value: 'contacts:read',    label: 'Contacts — read' },
+  { value: 'contacts:write',   label: 'Contacts — write' },
+  { value: 'companies:read',   label: 'Companies — read' },
+  { value: 'companies:write',  label: 'Companies — write' },
+  { value: 'actions:run',      label: 'Actions — run & list' },
+  { value: 'memory:read',      label: 'Memory — read' },
+  { value: 'memory:write',     label: 'Memory — write' },
+  { value: 'analytics:read',   label: 'Analytics — read' },
 ]
 
 function CopyButton({ text }) {

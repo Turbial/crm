@@ -902,6 +902,7 @@ class WebhookEndpointCreate(BaseModel):
     events: list[str] = []
     active: bool = True
     description: Optional[str] = None
+    entity_filters: list[dict] = []  # e.g. [{"entity_type": "lead", "entity_id": "abc"}]
 
 class WebhookEndpointOut(WebhookEndpointCreate):
     model_config = ConfigDict(from_attributes=True)
