@@ -9,8 +9,11 @@ import Dashboard from './pages/Dashboard'
 import Leads from './pages/crm/Leads'
 import LeadDetail from './pages/crm/LeadDetail'
 import Contacts from './pages/crm/Contacts'
+import ContactDetail from './pages/crm/ContactDetail'
 import Companies from './pages/crm/Companies'
+import CompanyDetail from './pages/crm/CompanyDetail'
 import Deals from './pages/crm/Deals'
+import DealDetail from './pages/crm/DealDetail'
 import Projects from './pages/pm/Projects'
 import ProjectBoard from './pages/pm/ProjectBoard'
 import MessengerInbox from './pages/messenger/MessengerInbox'
@@ -31,6 +34,7 @@ const qc = new QueryClient({
 const TITLES = {
   '/dashboard': 'Dashboard',
   '/crm/leads': 'Leads', '/crm/contacts': 'Contacts', '/crm/companies': 'Companies', '/crm/deals': 'Deals',
+  '/crm/leads/': 'Lead', '/crm/contacts/': 'Contact', '/crm/companies/': 'Company', '/crm/deals/': 'Deal',
   '/pm/projects': 'Projects',
   '/messenger': 'Messenger',
   '/actions': 'Action Runs',
@@ -61,8 +65,11 @@ function AppRoutes() {
         <Route path="/crm/leads" element={<Leads />} />
         <Route path="/crm/leads/:id" element={<LeadDetail />} />
         <Route path="/crm/contacts" element={<Contacts />} />
+        <Route path="/crm/contacts/:id" element={<ContactDetail />} />
         <Route path="/crm/companies" element={<Companies />} />
+        <Route path="/crm/companies/:id" element={<CompanyDetail />} />
         <Route path="/crm/deals" element={<Deals />} />
+        <Route path="/crm/deals/:id" element={<DealDetail />} />
         <Route path="/pm/projects" element={<Projects />} />
         <Route path="/pm/projects/:id" element={<ProjectBoard />} />
         <Route path="/messenger" element={<MessengerInbox />} />

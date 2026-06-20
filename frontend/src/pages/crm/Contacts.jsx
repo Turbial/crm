@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Users } from 'lucide-react'
 import { get, post } from '../../api'
 import Spinner from '../../components/Spinner'
@@ -8,6 +9,7 @@ import Modal from '../../components/Modal'
 
 export default function Contacts() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', title: '' })
 
@@ -39,7 +41,7 @@ export default function Contacts() {
                 <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Company</th><th>Title</th></tr></thead>
                 <tbody>
                   {contacts.map(c => (
-                    <tr key={c.id}>
+                    <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/crm/contacts/${c.id}`)}>
                       <td className="td-title">{c.name}</td>
                       <td className="td-muted">{c.email || '—'}</td>
                       <td className="td-muted">{c.phone || '—'}</td>

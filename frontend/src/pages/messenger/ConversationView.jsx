@@ -39,7 +39,7 @@ export default function ConversationView() {
   })
 
   const aiChat = useMutation({
-    mutationFn: body => post('/messenger-ai/chat', body),
+    mutationFn: body => post('/messenger/ai/chat', body),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['convo-messages', id] }); setAiText('') },
   })
 
@@ -92,6 +92,9 @@ export default function ConversationView() {
             <Zap size={15} />
           </button>
         </div>
+        {aiChat.isError && (
+          <p style={{ color: 'var(--danger)', fontSize: 12, marginTop: 6 }}>{aiChat.error?.message || 'AI command failed'}</p>
+        )}
       </div>
     </div>
   )

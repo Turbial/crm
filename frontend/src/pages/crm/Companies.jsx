@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Building2 } from 'lucide-react'
 import { get, post } from '../../api'
 import Spinner from '../../components/Spinner'
@@ -8,6 +9,7 @@ import Modal from '../../components/Modal'
 
 export default function Companies() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', domain: '', industry: '', size: '', website: '' })
 
@@ -39,7 +41,7 @@ export default function Companies() {
                 <thead><tr><th>Name</th><th>Domain</th><th>Industry</th><th>Size</th><th>Website</th></tr></thead>
                 <tbody>
                   {companies.map(c => (
-                    <tr key={c.id}>
+                    <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/crm/companies/${c.id}`)}>
                       <td className="td-title">{c.name}</td>
                       <td className="td-muted">{c.domain || '—'}</td>
                       <td className="td-muted">{c.industry || '—'}</td>

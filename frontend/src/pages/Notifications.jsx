@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Bell, Check } from 'lucide-react'
 import { get, post } from '../api'
 import Spinner from '../components/Spinner'
@@ -6,6 +7,7 @@ import EmptyState from '../components/EmptyState'
 
 export default function Notifications() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['notifications'],
@@ -26,6 +28,11 @@ export default function Notifications() {
 
   const unread = notifications.filter(n => !n.read)
 
+  function handleClick(n) {
+    if (!n.read) markRead.mutate(n.id)
+    if (n.action_url) navigate(n.action_url)
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -42,19 +49,29 @@ export default function Notifications() {
         : (
           <div className="card" style={{ padding: 0 }}>
             {notifications.map(n => (
-              <div key={n.id} className="flex gap-3 items-start" style={{
-                padding: '14px 18px',
-                borderBottom: '1px solid var(--border-subtle)',
-                background: n.read ? undefined : 'var(--accent-soft)',
-              }}>
+              <div
+                key={n.id}
+                className="flex gap-3 items-start"
+                onClick={() => handleClick(n)}
+                style={{
+                  padding: '14px 18px',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  background: n.read ? undefined : 'var(--accent-soft)',
+                  cursor: n.action_url ? 'pointer' : 'default',
+                }}
+              >
                 <Bell size={16} color={n.read ? 'var(--text-muted)' : 'var(--accent)'} style={{ marginTop: 3, flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
                   <div className="font-medium text-sm">{n.title}</div>
                   {n.body && <div className="text-sm" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{n.body}</div>}
-                  <div className="text-xs" style={{ color: 'var(--text-xs)', marginTop: 4 }}>{new Date(n.created_at).toLocaleString()}</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)', marginTop: 4 }}>{new Date(n.created_at).toLocaleString()}</div>
                 </div>
                 {!n.read && (
-                  <button className="btn btn-ghost btn-sm btn-icon" onClick={() => markRead.mutate(n.id)}>
+                  <button
+                    className="btn btn-ghost btn-sm btn-icon"
+                    onClick={e => { e.stopPropagation(); markRead.mutate(n.id) }}
+                    title="Mark read"
+                  >
                     <Check size={14} />
                   </button>
                 )}

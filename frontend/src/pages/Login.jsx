@@ -5,8 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { get } from '../api'
 
 export default function Login() {
-  const [email, setEmail] = useState('owner@mightymax.ai')
-  const [password, setPassword] = useState('mighty123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { setUser } = useAuth()
