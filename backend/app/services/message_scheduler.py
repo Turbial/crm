@@ -82,24 +82,27 @@ def _dispatch(channel: str, msg: ScheduledMessage) -> dict[str, Any]:
 
 
 def _send_email(msg: ScheduledMessage) -> dict[str, Any]:
-    """Stub email send. Replace with SES/SendGrid integration."""
-    logger.info(
-        "EMAIL to lead=%s subject=%r content_len=%d",
-        msg.lead_id,
-        msg.subject,
-        len(msg.content or ""),
+    from app.services.email_service import send_email
+    to = msg.to_address or ""
+    if not to:
+        logger.warning("ScheduledMessage %s has no to_address, skipping email", msg.id)
+        return {"provider": "skip", "reason": "no_to_address"}
+    result = send_email(
+        to=to,
+        subject=msg.subject or "(no subject)",
+        html_body=msg.content or "",
     )
-    return {"provider": "stub", "channel": "email"}
+    return {**result, "channel": "email"}
 
 
 def _send_sms(msg: ScheduledMessage) -> dict[str, Any]:
-    """Stub SMS send. Replace with Twilio/Vonage integration."""
-    logger.info(
-        "SMS to lead=%s content_len=%d",
-        msg.lead_id,
-        len(msg.content or ""),
-    )
-    return {"provider": "stub", "channel": "sms"}
+    from app.services.sms_service import send_sms
+    to = msg.to_address or ""
+    if not to:
+        logger.warning("ScheduledMessage %s has no to_address, skipping sms", msg.id)
+        return {"provider": "skip", "reason": "no_to_address"}
+    result = send_sms(to=to, body=msg.content or "")
+    return {**result, "channel": "sms"}
 
 
 def cancel_message(db: Session, org_id: str, message_id: str) -> bool:

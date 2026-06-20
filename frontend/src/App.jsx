@@ -21,6 +21,7 @@ import Supervisor from './pages/Supervisor'
 import DailyBrief from './pages/DailyBrief'
 import Duplicates from './pages/Duplicates'
 import Notifications from './pages/Notifications'
+import Settings from './pages/Settings'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -38,6 +39,7 @@ const TITLES = {
   '/daily-brief': 'Daily Brief',
   '/duplicates': 'Duplicates',
   '/notifications': 'Notifications',
+  '/settings': 'Settings',
 }
 
 function ProtectedRoute() {
@@ -71,6 +73,7 @@ function AppRoutes() {
         <Route path="/daily-brief" element={<DailyBrief />} />
         <Route path="/duplicates" element={<Duplicates />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

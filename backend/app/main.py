@@ -66,6 +66,11 @@ from app.routers import (
     duplicates,
     sla_rules,
     record_permissions,
+    # Phase 4: Infrastructure & Delivery
+    settings as settings_router,
+    audit_log,
+    agent_memory,
+    sse,
 )
 
 
@@ -179,6 +184,11 @@ def create_app() -> FastAPI:
         duplicates.router,
         sla_rules.router,
         record_permissions.router,
+        # Phase 4: Infrastructure & Delivery
+        settings_router.router,
+        audit_log.router,
+        agent_memory.router,
+        sse.router,
     ]:
         app.include_router(router)
 

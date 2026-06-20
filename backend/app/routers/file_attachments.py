@@ -1,7 +1,9 @@
 """File attachment endpoints — generic across all entity types."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import io
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -10,6 +12,43 @@ from app.models import User, FileAttachment
 from app.schemas import FileAttachmentCreate, FileAttachmentOut
 
 router = APIRouter(prefix="/attachments", tags=["Attachments"])
+
+
+@router.post("/upload", response_model=FileAttachmentOut, status_code=201)
+async def upload_attachment(
+    entity_type: str = Query(...),
+    entity_id: str = Query(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    from app.services.file_service import upload_file
+    content = await file.read()
+    url = upload_file(
+        io.BytesIO(content),
+        file.filename or "upload",
+        content_type=file.content_type or "application/octet-stream",
+        prefix=f"attachments/{entity_type}",
+    )
+    attachment = FileAttachment(
+        organization_id=user.organization_id,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        uploaded_by_user_id=user.id,
+        name=file.filename or "upload",
+        mime_type=file.content_type or "application/octet-stream",
+        size_bytes=len(content),
+        storage_url=url,
+        is_public=False,
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    from app.services.timeline_service import record_file_uploaded
+    record_file_uploaded(db, user.organization_id, entity_type, entity_id,
+                         file.filename or "upload", actor_id=user.id, actor_name=user.name)
+    db.commit()
+    return attachment
 
 
 @router.post("", response_model=FileAttachmentOut)

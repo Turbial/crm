@@ -52,6 +52,30 @@ class Settings(BaseSettings):
     worker_poll_seconds: int = 5
     redis_url: str = "redis://redis:6379/0"
 
+    # Email delivery
+    sendgrid_api_key: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    email_from: str = "noreply@mightyops.io"
+    email_from_name: str = "MightyOps"
+
+    # SMS delivery
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_from_number: str = ""
+
+    # File storage: "local" | "s3"
+    storage_backend: str = "local"
+    local_storage_path: str = "./uploads"
+    s3_bucket: str = ""
+    s3_region: str = "us-east-1"
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    s3_endpoint_url: str = ""          # For MinIO or S3-compatible endpoints
+    storage_public_url: str = "http://localhost:8000/uploads"
+
     # Observability.
     log_level: str = "INFO"
     request_id_header: str = "X-Request-ID"

@@ -152,8 +152,11 @@ def generate_brief(
 
 
 def deliver_brief(db: Session, brief: DailyBrief) -> None:
-    """Deliver brief via notification center (and stub Messenger/email)."""
+    """Deliver brief via notification center and email."""
+    from app.models import User, UserRole
     from app.services.notification_service import notify_org_managers
+    from app.services.email_service import send_email
+
     notify_org_managers(
         db, brief.organization_id,
         title="Your MightyOps Daily Brief is ready",
@@ -161,6 +164,22 @@ def deliver_brief(db: Session, brief: DailyBrief) -> None:
         notification_type="daily_brief",
         action_url=f"/daily-brief/{brief.id}",
     )
+
+    managers = db.query(User).filter(
+        User.organization_id == brief.organization_id,
+        User.role.in_([UserRole.owner, UserRole.manager]),
+        User.is_active == True,
+        User.email != None,
+    ).all()
+    html_body = "<pre style='font-family:monospace'>" + brief.summary_text + "</pre>"
+    for mgr in managers:
+        send_email(
+            to=mgr.email,
+            subject=f"MightyOps Daily Brief — {brief.brief_date.strftime('%b %-d')}",
+            html_body=html_body,
+            text_body=brief.summary_text,
+        )
+
     brief.status = DailyBriefStatus.delivered
     brief.delivered_at = datetime.utcnow()
     db.commit()

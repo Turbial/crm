@@ -129,5 +129,15 @@ def unread_count(db: Session, org_id: str, user_id: str) -> int:
 
 
 def _maybe_deliver_realtime(notification: Notification) -> None:
-    """Stub for WebSocket / push / Messenger delivery. Wire real channels here."""
-    logger.debug("Notification created for user %s: %s", notification.user_id, notification.title)
+    """Push notification to any open SSE connections for this user."""
+    try:
+        from app.routers.sse import push_notification
+        push_notification(notification.user_id, {
+            "type": "notification",
+            "id": notification.id,
+            "title": notification.title,
+            "body": notification.body,
+            "action_url": notification.action_url,
+        })
+    except Exception:
+        logger.debug("Notification created for user %s: %s", notification.user_id, notification.title)
