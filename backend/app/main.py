@@ -71,6 +71,8 @@ from app.routers import (
     audit_log,
     agent_memory,
     sse,
+    # Agent API
+    agent_api,
 )
 
 
@@ -189,6 +191,8 @@ def create_app() -> FastAPI:
         audit_log.router,
         agent_memory.router,
         sse.router,
+        # Agent API
+        agent_api.router,
     ]:
         app.include_router(router)
 

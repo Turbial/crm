@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Settings as SettingsIcon, Plus, Trash2, Save } from 'lucide-react'
+import { Settings as SettingsIcon, Plus, Trash2, Save, Key, Copy, Check, Eye, EyeOff } from 'lucide-react'
 import { get, post, patch, del } from '../api'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 
-const TABS = ['Organization', 'SLA Rules', 'Custom Fields', 'Members']
+const TABS = ['Organization', 'SLA Rules', 'Custom Fields', 'Members', 'API Keys']
 
 export default function Settings() {
   const [tab, setTab] = useState('Organization')
@@ -38,6 +38,7 @@ export default function Settings() {
       {tab === 'SLA Rules' && <SLARules />}
       {tab === 'Custom Fields' && <CustomFields />}
       {tab === 'Members' && <Members />}
+      {tab === 'API Keys' && <ApiKeys />}
     </div>
   )
 }
@@ -253,6 +254,226 @@ function Members() {
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+const ALL_SCOPES = [
+  { value: 'leads:read',     label: 'Leads — read' },
+  { value: 'leads:write',    label: 'Leads — write' },
+  { value: 'deals:read',     label: 'Deals — read' },
+  { value: 'deals:write',    label: 'Deals — write' },
+  { value: 'contacts:read',  label: 'Contacts — read' },
+  { value: 'actions:run',    label: 'Actions — run & list' },
+  { value: 'memory:read',    label: 'Memory — read' },
+  { value: 'memory:write',   label: 'Memory — write' },
+  { value: 'analytics:read', label: 'Analytics — read' },
+]
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false)
+  function handleCopy() {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  return (
+    <button className="btn btn-ghost btn-icon btn-sm" onClick={handleCopy} title="Copy">
+      {copied ? <Check size={14} color="var(--success)" /> : <Copy size={14} />}
+    </button>
+  )
+}
+
+function RevealKey({ raw }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className="flex items-center gap-1" style={{ fontFamily: 'monospace', fontSize: 13 }}>
+      <span style={{ color: 'var(--accent)' }}>
+        {show ? raw : raw.slice(0, 12) + '•'.repeat(20)}
+      </span>
+      <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShow(s => !s)} title={show ? 'Hide' : 'Reveal'}>
+        {show ? <EyeOff size={13} /> : <Eye size={13} />}
+      </button>
+      <CopyButton text={raw} />
+    </div>
+  )
+}
+
+function ApiKeys() {
+  const qc = useQueryClient()
+  const [showForm, setShowForm] = useState(false)
+  const [newKey, setNewKey] = useState(null) // raw key shown once after creation
+  const [form, setForm] = useState({ name: '', scopes: [], expires_at: '' })
+
+  const { data: keys = [], isLoading } = useQuery({
+    queryKey: ['api-keys'],
+    queryFn: () => get('/api-keys'),
+  })
+
+  const create = useMutation({
+    mutationFn: () => post('/api-keys', {
+      name: form.name,
+      scopes: form.scopes,
+      expires_at: form.expires_at || null,
+    }),
+    onSuccess: (data) => {
+      setNewKey(data.raw_key)
+      setShowForm(false)
+      setForm({ name: '', scopes: [], expires_at: '' })
+      qc.invalidateQueries({ queryKey: ['api-keys'] })
+    },
+  })
+
+  const revoke = useMutation({
+    mutationFn: id => del(`/api-keys/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['api-keys'] }),
+  })
+
+  function toggleScope(scope) {
+    setForm(f => ({
+      ...f,
+      scopes: f.scopes.includes(scope) ? f.scopes.filter(s => s !== scope) : [...f.scopes, scope],
+    }))
+  }
+
+  if (isLoading) return <Spinner />
+
+  return (
+    <div>
+      {/* One-time key display */}
+      {newKey && (
+        <div className="card" style={{ marginBottom: 20, background: 'var(--accent-soft)', border: '1px solid var(--accent)' }}>
+          <div className="flex items-center gap-2" style={{ marginBottom: 8 }}>
+            <Key size={16} color="var(--accent)" />
+            <strong style={{ color: 'var(--accent)' }}>API key created — copy it now, it won't be shown again</strong>
+          </div>
+          <RevealKey raw={newKey} />
+          <div style={{ marginTop: 12 }}>
+            <strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Usage:</strong>
+            <code style={{ fontSize: 12, display: 'block', color: 'var(--text-muted)' }}>
+              curl -H "X-API-Key: {newKey}" https://api.mightyops.io/agent/context
+            </code>
+            <code style={{ fontSize: 12, display: 'block', color: 'var(--text-muted)', marginTop: 4 }}>
+              curl -H "Authorization: Bearer {newKey}" https://api.mightyops.io/agent/leads
+            </code>
+          </div>
+          <button className="btn btn-secondary btn-sm" style={{ marginTop: 12 }} onClick={() => setNewKey(null)}>
+            I've copied it, dismiss
+          </button>
+        </div>
+      )}
+
+      <div className="flex" style={{ justifyContent: 'flex-end', marginBottom: 16 }}>
+        <button className="btn btn-primary flex gap-2 items-center" onClick={() => setShowForm(true)}>
+          <Plus size={14} /> New API Key
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card" style={{ marginBottom: 20, maxWidth: 520 }}>
+          <h4 style={{ marginTop: 0 }}>Create API Key</h4>
+          <div className="form-group">
+            <label>Name <span style={{ color: 'var(--danger)' }}>*</span></label>
+            <input
+              className="form-input"
+              placeholder="e.g. Prospecting Agent"
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Scopes <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(leave all unchecked for full access)</span></label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginTop: 6 }}>
+              {ALL_SCOPES.map(s => (
+                <label key={s.value} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={form.scopes.includes(s.value)}
+                    onChange={() => toggleScope(s.value)}
+                  />
+                  {s.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Expires at <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+            <input
+              type="datetime-local"
+              className="form-input"
+              value={form.expires_at}
+              onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))}
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              className="btn btn-primary"
+              onClick={() => create.mutate()}
+              disabled={create.isPending || !form.name.trim()}
+            >
+              {create.isPending ? 'Creating…' : 'Create key'}
+            </button>
+            <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
+          {create.isError && (
+            <p style={{ color: 'var(--danger)', fontSize: 13, marginTop: 8 }}>{create.error?.message}</p>
+          )}
+        </div>
+      )}
+
+      {/* Docs callout */}
+      <div className="card" style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)' }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
+          <strong>Agent endpoints:</strong>{' '}
+          <code>/agent/context</code> · <code>/agent/leads</code> · <code>/agent/deals</code> ·{' '}
+          <code>/agent/actions/run</code> · <code>/agent/memory/:key</code> · <code>/agent/analytics/summary</code>
+          {' — '}pass your key as <code>X-API-Key</code> header or <code>Authorization: Bearer</code>.
+          See <code>GET /agent/capabilities</code> for the full endpoint list and required scopes.
+        </p>
+      </div>
+
+      {keys.length === 0 && !showForm
+        ? <EmptyState icon={Key} title="No API keys" description="Create a key to give agents or external systems access to MightyOps." />
+        : (
+          <div className="card" style={{ padding: 0 }}>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Name</th><th>Prefix</th><th>Scopes</th><th>Last used</th><th>Expires</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {keys.map(k => (
+                    <tr key={k.id}>
+                      <td className="font-medium">{k.name}</td>
+                      <td><code style={{ fontSize: 12 }}>{k.key_prefix}…</code></td>
+                      <td style={{ fontSize: 12 }}>
+                        {k.scopes.length === 0
+                          ? <span style={{ color: 'var(--text-muted)' }}>full access</span>
+                          : k.scopes.join(', ')}
+                      </td>
+                      <td className="td-muted">{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : '—'}</td>
+                      <td className="td-muted">{k.expires_at ? new Date(k.expires_at).toLocaleDateString() : 'Never'}</td>
+                      <td>
+                        <button
+                          className="btn btn-ghost btn-icon btn-sm"
+                          title="Revoke"
+                          onClick={() => { if (window.confirm(`Revoke key "${k.name}"?`)) revoke.mutate(k.id) }}
+                          disabled={revoke.isPending}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
     </div>
   )
 }
