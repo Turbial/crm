@@ -66,9 +66,19 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_from_number: str = ""
 
-    # AI / LLM
+    # AI / LLM — set whichever provider(s) you want to use.
+    # Keys set here are org-wide env-var defaults; per-org keys can be configured
+    # in Settings → AI and are stored in the organization's settings JSON.
+    ai_provider: str = ""                  # auto-detect if empty (first configured key wins)
     anthropic_api_key: str = ""
-    ai_model: str = "claude-sonnet-4-6"
+    ai_model: str = "claude-sonnet-4-6"   # model for Anthropic
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    openai_base_url: str = "https://api.openai.com/v1"
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-chat"
+    google_api_key: str = ""
+    google_model: str = "gemini-1.5-flash"
 
     # File storage: "local" | "s3"
     storage_backend: str = "local"

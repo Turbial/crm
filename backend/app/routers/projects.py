@@ -221,11 +221,13 @@ def ai_scope_preview(
     project = ensure_project(db, user.organization_id, project_id)
     if not body.description.strip():
         raise HTTPException(status_code=422, detail="description is required")
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
     from app.services.ai_scope_service import scope_project
     result = scope_project(
         project_name=project.name,
         description=body.description,
         additional_context=body.additional_context,
+        org_settings=org.settings if org else None,
     )
     task_count = sum(len(m["tasks"]) for m in result["milestones"])
     return {**result, "task_count": task_count, "milestone_count": len(result["milestones"])}

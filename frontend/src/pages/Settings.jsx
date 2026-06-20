@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Settings as SettingsIcon, Plus, Trash2, Save, Key, Copy, Check, Eye, EyeOff } from 'lucide-react'
+import { Settings as SettingsIcon, Plus, Trash2, Save, Key, Copy, Check, Eye, EyeOff, Sparkles, CheckCircle, XCircle, Loader } from 'lucide-react'
 import { get, post, patch, del } from '../api'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 
-const TABS = ['Organization', 'SLA Rules', 'Custom Fields', 'Members', 'API Keys']
+const TABS = ['Organization', 'SLA Rules', 'Custom Fields', 'Members', 'API Keys', 'AI']
 
 export default function Settings() {
   const [tab, setTab] = useState('Organization')
@@ -39,6 +39,7 @@ export default function Settings() {
       {tab === 'Custom Fields' && <CustomFields />}
       {tab === 'Members' && <Members />}
       {tab === 'API Keys' && <ApiKeys />}
+      {tab === 'AI' && <AISettings />}
     </div>
   )
 }
@@ -477,6 +478,204 @@ function ApiKeys() {
             </div>
           </div>
         )}
+    </div>
+  )
+}
+
+
+// ── AI / LLM Provider Settings ────────────────────────────────────────────────
+
+const PROVIDER_META = {
+  anthropic: { label: 'Anthropic (Claude)',         placeholder: 'sk-ant-api03-...', defaultModel: 'claude-sonnet-4-6', color: '#cc785c' },
+  openai:    { label: 'OpenAI (GPT)',               placeholder: 'sk-...',            defaultModel: 'gpt-4o-mini',       color: '#10a37f' },
+  deepseek:  { label: 'DeepSeek',                   placeholder: 'sk-...',            defaultModel: 'deepseek-chat',     color: '#4d6bfe' },
+  google:    { label: 'Google (Gemini)',             placeholder: 'AI...',             defaultModel: 'gemini-1.5-flash',  color: '#4285f4' },
+  custom:    { label: 'Custom (OpenAI-compatible)', placeholder: 'key...',            defaultModel: '',                  color: '#888'    },
+}
+
+function AISettings() {
+  const qc = useQueryClient()
+  const { data: llm, isLoading } = useQuery({
+    queryKey: ['settings', 'llm'],
+    queryFn: () => get('/settings/llm'),
+  })
+  const [edits, setEdits] = useState({})
+  const [show, setShow] = useState({})
+  const [testStatus, setTestStatus] = useState(null)
+  const [testMsg, setTestMsg] = useState('')
+
+  const save = useMutation({
+    mutationFn: body => patch('/settings/llm', body),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['settings', 'llm'] }); setEdits({}) },
+  })
+
+  const allProviders = llm
+    ? [...new Set([...Object.keys(PROVIDER_META), ...Object.keys(llm.providers || {})])]
+    : Object.keys(PROVIDER_META)
+
+  function getEdit(pname, field) { return edits[pname]?.[field] ?? '' }
+  function setEdit(pname, field, value) {
+    setEdits(e => ({ ...e, [pname]: { ...(e[pname] || {}), [field]: value } }))
+  }
+
+  function handleSave() {
+    const providers = {}
+    for (const [pname, fields] of Object.entries(edits)) {
+      if (pname !== '_active' && Object.keys(fields).length > 0) providers[pname] = fields
+    }
+    save.mutate({
+      active_provider: edits._active || undefined,
+      providers: Object.keys(providers).length ? providers : undefined,
+    })
+  }
+
+  async function handleTest() {
+    setTestStatus('loading'); setTestMsg('')
+    try {
+      const r = await post('/settings/llm/test', {})
+      setTestStatus('ok'); setTestMsg(r.response || 'OK')
+    } catch (err) {
+      setTestStatus('error'); setTestMsg(err.message || 'Connection failed')
+    }
+  }
+
+  const hasEdits = Object.keys(edits).length > 0
+  const activeProvider = edits._active ?? llm?.active_provider
+
+  if (isLoading) return <Spinner />
+
+  return (
+    <div style={{ maxWidth: 720 }}>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Active Provider</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+          Configure one or more providers below. The active provider is used for AI features like project scoping.
+        </p>
+        <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+          {allProviders.map(pname => {
+            const meta = PROVIDER_META[pname] || { label: pname, color: '#888' }
+            const isActive = activeProvider === pname
+            const isConfigured = llm?.providers?.[pname]?.configured
+            return (
+              <button
+                key={pname}
+                onClick={() => setEdits(e => ({ ...e, _active: pname }))}
+                className="btn"
+                style={{
+                  border: `2px solid ${isActive ? meta.color : 'var(--border-subtle)'}`,
+                  background: isActive ? `${meta.color}18` : 'transparent',
+                  color: isActive ? meta.color : 'var(--text)',
+                  fontWeight: isActive ? 600 : 400,
+                  fontSize: 13,
+                  gap: 6,
+                }}
+              >
+                {isConfigured && <span style={{ color: '#22c55e', fontSize: 10 }}>●</span>}
+                {meta.label}
+                {isActive && ' ✓'}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {allProviders.map(pname => {
+        const meta = PROVIDER_META[pname] || { label: pname, placeholder: 'key...', defaultModel: '', color: '#888' }
+        const current = llm?.providers?.[pname] || {}
+        const isCustom = pname === 'custom'
+        const showBaseUrl = isCustom || pname === 'openai'
+
+        return (
+          <div key={pname} className="card" style={{ marginBottom: 16, borderLeft: `3px solid ${meta.color}` }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{meta.label}</span>
+              {current.configured && (
+                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: '#d4edda', color: '#155724' }}>Configured</span>
+              )}
+              {activeProvider === pname && (
+                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: `${meta.color}22`, color: meta.color }}>Active</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">API Key</label>
+              <div className="flex gap-2">
+                <input
+                  className="form-input"
+                  type={show[pname] ? 'text' : 'password'}
+                  placeholder={current.configured ? current.api_key_masked : meta.placeholder}
+                  value={getEdit(pname, 'api_key')}
+                  onChange={e => setEdit(pname, 'api_key', e.target.value)}
+                  style={{ flex: 1, fontFamily: 'monospace', fontSize: 13 }}
+                />
+                <button className="btn btn-ghost btn-icon" onClick={() => setShow(s => ({ ...s, [pname]: !s[pname] }))}>
+                  {show[pname] ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+                {current.configured && (
+                  <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)', fontSize: 12 }} onClick={() => setEdit(pname, 'api_key', '')}>
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Model</label>
+              <input
+                className="form-input"
+                placeholder={current.model || meta.defaultModel || 'e.g. gpt-4o-mini'}
+                value={getEdit(pname, 'model')}
+                onChange={e => setEdit(pname, 'model', e.target.value)}
+              />
+            </div>
+
+            {showBaseUrl && (
+              <div className="form-group">
+                <label className="form-label">Base URL{isCustom ? ' *' : ' (optional override)'}</label>
+                <input
+                  className="form-input"
+                  placeholder={current.base_url || (isCustom ? 'https://your-endpoint/v1' : 'https://api.openai.com/v1')}
+                  value={getEdit(pname, 'base_url')}
+                  onChange={e => setEdit(pname, 'base_url', e.target.value)}
+                />
+                {isCustom && (
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Works with Ollama, Groq, Together AI, LM Studio, or any OpenAI-compatible endpoint.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      <div className="flex items-center gap-3 mt-4" style={{ flexWrap: 'wrap' }}>
+        <button className="btn btn-primary" disabled={save.isPending || !hasEdits} onClick={handleSave}>
+          {save.isPending ? 'Saving…' : 'Save Changes'}
+        </button>
+        <button className="btn btn-secondary flex gap-2 items-center" onClick={handleTest} disabled={testStatus === 'loading'}>
+          <Sparkles size={13} /> Test Connection
+        </button>
+        {testStatus === 'ok' && (
+          <span className="flex gap-1 items-center" style={{ fontSize: 13, color: '#22c55e' }}>
+            <CheckCircle size={13} /> Connected — &ldquo;{testMsg}&rdquo;
+          </span>
+        )}
+        {testStatus === 'error' && (
+          <span className="flex gap-1 items-center" style={{ fontSize: 13, color: 'var(--danger)' }}>
+            <XCircle size={13} /> {testMsg}
+          </span>
+        )}
+        {save.isError && <span style={{ fontSize: 13, color: 'var(--danger)' }}>{save.error?.message}</span>}
+      </div>
+
+      <div className="card" style={{ marginTop: 24, background: 'var(--bg-surface)' }}>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+          <strong>Env var fallbacks:</strong> If no key is saved here, the system reads{' '}
+          <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>DEEPSEEK_API_KEY</code>,{' '}
+          and <code>GOOGLE_API_KEY</code> from environment variables automatically. Keys saved here take precedence per organization.
+        </p>
+      </div>
     </div>
   )
 }

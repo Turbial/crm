@@ -148,3 +148,86 @@ def delete_sla_rule(
         raise HTTPException(status_code=404, detail="SLA rule not found")
     db.delete(rule)
     db.commit()
+
+
+# ── LLM / AI provider settings ────────────────────────────────────────────────
+
+class LLMProviderConfig(BaseModel):
+    api_key: Optional[str] = None         # None = don't change; "" = clear
+    model: Optional[str] = None
+    base_url: Optional[str] = None        # for custom / openai-compat providers
+
+class LLMSettingsUpdate(BaseModel):
+    active_provider: Optional[str] = None
+    providers: Optional[dict[str, LLMProviderConfig]] = None
+
+
+@router.get("/llm")
+def get_llm_settings(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Return current LLM provider configuration (API keys are masked)."""
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    from app.services.llm_client import get_provider_status
+    return get_provider_status(org.settings if org else None)
+
+
+@router.patch("/llm")
+def update_llm_settings(
+    body: LLMSettingsUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_manager),
+):
+    """Update LLM provider configuration.
+
+    Send only the fields you want to change. Pass api_key="" to clear a key.
+    API keys are stored in the organization settings; masked in GET responses.
+    """
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    settings_dict = dict(org.settings or {})
+    llm = dict(settings_dict.get("llm", {}))
+    existing_providers = dict(llm.get("providers", {}))
+
+    if body.active_provider is not None:
+        from app.services.llm_client import PROVIDERS
+        if body.active_provider not in PROVIDERS:
+            raise HTTPException(status_code=422, detail=f"Unknown provider: {body.active_provider}. Valid: {list(PROVIDERS)}")
+        llm["active_provider"] = body.active_provider
+
+    if body.providers:
+        for pname, pconf in body.providers.items():
+            existing = dict(existing_providers.get(pname, {}))
+            if pconf.api_key is not None:
+                existing["api_key"] = pconf.api_key
+            if pconf.model is not None:
+                existing["model"] = pconf.model
+            if pconf.base_url is not None:
+                existing["base_url"] = pconf.base_url
+            existing_providers[pname] = existing
+
+    llm["providers"] = existing_providers
+    settings_dict["llm"] = llm
+    org.settings = settings_dict
+    db.commit()
+
+    from app.services.llm_client import get_provider_status
+    return get_provider_status(org.settings)
+
+
+@router.post("/llm/test")
+def test_llm_connection(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Send a minimal test prompt to verify the active provider is working."""
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    from app.services.llm_client import complete
+    try:
+        response = complete("Reply with exactly: OK", org_settings=org.settings if org else None)
+        return {"ok": True, "response": response[:200]}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))

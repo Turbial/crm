@@ -1,9 +1,9 @@
 """AI-powered project scoping service.
 
-Sends a project description to Claude and gets back a structured breakdown of
-milestones and tasks ready to populate a Kanban board.
+Sends a project description to the configured LLM provider and gets back a
+structured breakdown of milestones and tasks for a Kanban board.
 
-Falls back to keyword-based blueprint matching when ANTHROPIC_API_KEY is not set.
+Falls back to keyword-based blueprint matching when no LLM is configured.
 """
 from __future__ import annotations
 
@@ -11,8 +11,6 @@ import json
 import logging
 import re
 from typing import Any
-
-import httpx
 
 logger = logging.getLogger("mighty.ai_scope")
 
@@ -159,24 +157,6 @@ def _detect_type(description: str) -> str:
     return "default"
 
 
-def _call_claude(prompt: str, api_key: str, model: str) -> str:
-    resp = httpx.post(
-        "https://api.anthropic.com/v1/messages",
-        headers={
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": model,
-            "max_tokens": 4096,
-            "messages": [{"role": "user", "content": prompt}],
-        },
-        timeout=45.0,
-    )
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
-
 
 def _extract_json(text: str) -> dict:
     """Extract first JSON object from text, handling markdown code fences."""
@@ -238,26 +218,27 @@ def scope_project(
     project_name: str,
     description: str,
     additional_context: str = "",
+    org_settings: dict | None = None,
 ) -> dict[str, Any]:
     """Return a scoping breakdown as {milestones: [{name, description, tasks: [...]}]}.
 
-    Uses Claude when ANTHROPIC_API_KEY is set, otherwise uses keyword-based blueprint.
+    Uses the org's configured LLM provider (or env-var fallback). Falls back
+    to keyword-based blueprints if no provider is configured.
     """
-    from app.config import settings
+    from app.services.llm_client import complete
 
-    if settings.anthropic_api_key:
-        context_block = f"\nAdditional context: {additional_context}" if additional_context else ""
-        prompt = _SCOPE_PROMPT.format(
-            project_name=project_name,
-            description=description,
-            context_block=context_block,
-        )
-        try:
-            raw_text = _call_claude(prompt, settings.anthropic_api_key, settings.ai_model)
-            raw = _extract_json(raw_text)
-            return _normalize_result(raw, project_name)
-        except Exception as exc:
-            logger.warning("Claude scoping failed, falling back to blueprint: %s", exc)
+    context_block = f"\nAdditional context: {additional_context}" if additional_context else ""
+    prompt = _SCOPE_PROMPT.format(
+        project_name=project_name,
+        description=description,
+        context_block=context_block,
+    )
+    try:
+        raw_text = complete(prompt, org_settings=org_settings)
+        raw = _extract_json(raw_text)
+        return _normalize_result(raw, project_name)
+    except Exception as exc:
+        logger.warning("LLM scoping failed, falling back to blueprint: %s", exc)
 
     # Fallback: keyword-based blueprint
     detected = _detect_type(f"{project_name} {description} {additional_context}")
