@@ -186,74 +186,228 @@ function SLARules() {
   )
 }
 
+const FIELD_TYPES = ['text', 'number', 'date', 'boolean', 'select', 'textarea', 'url', 'email', 'phone']
+const FIELD_ENTITIES = ['lead', 'contact', 'company', 'deal', 'project']
+
 function CustomFields() {
+  const qc = useQueryClient()
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({ entity_type: 'lead', name: '', key: '', field_type: 'text', required: false, position: 1, active: true })
+
   const { data: fields = [], isLoading } = useQuery({
     queryKey: ['custom-fields'],
     queryFn: () => get('/custom-fields'),
+  })
+
+  const create = useMutation({
+    mutationFn: () => post('/custom-fields', { ...form, options: form.field_type === 'select' ? [] : null }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['custom-fields'] }); setShowAdd(false); setForm({ entity_type: 'lead', name: '', key: '', field_type: 'text', required: false, position: 1, active: true }) },
+  })
+
+  const remove = useMutation({
+    mutationFn: id => del(`/custom-fields/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['custom-fields'] }),
+  })
+
+  if (isLoading) return <Spinner />
+
+  function deriveKey(name) {
+    return name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+  }
+
+  return (
+    <div>
+      <div className="flex" style={{ justifyContent: 'flex-end', marginBottom: 16 }}>
+        <button className="btn btn-primary flex gap-2 items-center" onClick={() => setShowAdd(true)}>
+          <Plus size={14} /> Add Field
+        </button>
+      </div>
+
+      {showAdd && (
+        <div className="card" style={{ marginBottom: 20, maxWidth: 520 }}>
+          <h4 style={{ marginTop: 0, marginBottom: 14 }}>New Custom Field</h4>
+          <div className="two-col">
+            <div className="form-group">
+              <label className="form-label">Entity</label>
+              <select className="form-input" value={form.entity_type} onChange={e => setForm(f => ({ ...f, entity_type: e.target.value }))}>
+                {FIELD_ENTITIES.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Field Type</label>
+              <select className="form-input" value={form.field_type} onChange={e => setForm(f => ({ ...f, field_type: e.target.value }))}>
+                {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Label (display name)</label>
+            <input
+              className="form-input"
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value, key: deriveKey(e.target.value) }))}
+              placeholder="e.g. Customer Tier"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Key (API field name)</label>
+            <input
+              className="form-input"
+              value={form.key}
+              onChange={e => setForm(f => ({ ...f, key: deriveKey(e.target.value) }))}
+              placeholder="e.g. customer_tier"
+              style={{ fontFamily: 'monospace', fontSize: 13 }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <input type="checkbox" id="cf-required" checked={form.required} onChange={e => setForm(f => ({ ...f, required: e.target.checked }))} />
+            <label htmlFor="cf-required" style={{ fontSize: 13, cursor: 'pointer' }}>Required field</label>
+          </div>
+          {create.isError && <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{create.error?.message}</p>}
+          <div className="flex gap-2">
+            <button className="btn btn-primary" onClick={() => create.mutate()} disabled={!form.name.trim() || !form.key.trim() || create.isPending}>
+              {create.isPending ? 'Creating…' : 'Create'}
+            </button>
+            <button className="btn btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {fields.length === 0 && !showAdd ? (
+        <EmptyState icon={SettingsIcon} title="No custom fields" description="Extend entity records with organization-specific fields." />
+      ) : (
+        <div className="card" style={{ padding: 0 }}>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Entity</th><th>Label</th><th>Key</th><th>Type</th><th>Required</th><th></th></tr>
+              </thead>
+              <tbody>
+                {fields.map(f => (
+                  <tr key={f.id}>
+                    <td className="td-muted">{f.entity_type}</td>
+                    <td className="font-medium">{f.name}</td>
+                    <td><code style={{ fontSize: 11 }}>{f.key}</code></td>
+                    <td className="td-muted">{f.field_type}</td>
+                    <td className="td-muted">{f.required ? 'Yes' : 'No'}</td>
+                    <td>
+                      <button className="btn btn-ghost btn-icon btn-sm" onClick={() => remove.mutate(f.id)} disabled={remove.isPending}>
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const ROLES = ['owner', 'manager', 'employee', 'agent']
+
+function Members() {
+  const qc = useQueryClient()
+  const [showInvite, setShowInvite] = useState(false)
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'employee' })
+
+  const { data: members = [], isLoading } = useQuery({
+    queryKey: ['org', 'members'],
+    queryFn: () => get('/organizations/me/members'),
+  })
+
+  const invite = useMutation({
+    mutationFn: () => post('/organizations/me/members', form),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['org', 'members'] })
+      setShowInvite(false)
+      setForm({ name: '', email: '', password: '', role: 'employee' })
+    },
+  })
+
+  const updateRole = useMutation({
+    mutationFn: ({ id, role }) => patch(`/organizations/me/members/${id}`, { role }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['org', 'members'] }),
   })
 
   if (isLoading) return <Spinner />
 
   return (
     <div>
-      {fields.length === 0
-        ? <EmptyState icon={SettingsIcon} title="No custom fields" description="Custom fields let you extend entity records with organization-specific data." />
-        : (
-          <div className="card" style={{ padding: 0 }}>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr><th>Entity</th><th>Label</th><th>Type</th><th>Required</th></tr>
-                </thead>
-                <tbody>
-                  {fields.map(f => (
-                    <tr key={f.id}>
-                      <td>{f.entity_type}</td>
-                      <td>{f.label}</td>
-                      <td>{f.field_type}</td>
-                      <td>{f.is_required ? 'Yes' : 'No'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      <div className="flex" style={{ justifyContent: 'flex-end', marginBottom: 16 }}>
+        <button className="btn btn-primary flex gap-2 items-center" onClick={() => setShowInvite(true)}>
+          <Plus size={14} /> Add Member
+        </button>
+      </div>
+
+      {showInvite && (
+        <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
+          <h4 style={{ marginTop: 0, marginBottom: 14 }}>Add Team Member</h4>
+          <div className="form-group">
+            <label className="form-label">Full Name</label>
+            <input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Jane Smith" autoFocus />
           </div>
-        )}
-    </div>
-  )
-}
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input className="form-input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@acme.com" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Temporary Password</label>
+            <input className="form-input" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Min 10 characters" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Role</label>
+            <select className="form-input" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          {invite.isError && <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{invite.error?.message}</p>}
+          <div className="flex gap-2">
+            <button
+              className="btn btn-primary"
+              disabled={!form.name.trim() || !form.email.trim() || !form.password.trim() || invite.isPending}
+              onClick={() => invite.mutate()}
+            >
+              {invite.isPending ? 'Adding…' : 'Add Member'}
+            </button>
+            <button className="btn btn-secondary" onClick={() => setShowInvite(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
 
-function Members() {
-  const { data: org, isLoading } = useQuery({
-    queryKey: ['org'],
-    queryFn: () => get('/organizations/me'),
-  })
-  const { data: members = [], isLoading: loadingMembers } = useQuery({
-    queryKey: ['org', 'members'],
-    queryFn: () => get('/organizations/me/members'),
-    enabled: !!org,
-  })
-
-  if (isLoading || loadingMembers) return <Spinner />
-
-  return (
-    <div className="card" style={{ padding: 0 }}>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            {members.map(m => (
-              <tr key={m.id}>
-                <td className="font-medium">{m.name}</td>
-                <td className="td-muted">{m.email}</td>
-                <td>{m.role}</td>
-                <td>{m.is_active ? 'Active' : 'Inactive'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="card" style={{ padding: 0 }}>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {members.map(m => (
+                <tr key={m.id}>
+                  <td className="font-medium">{m.name}</td>
+                  <td className="td-muted">{m.email}</td>
+                  <td>
+                    <select
+                      className="form-input"
+                      value={m.role}
+                      onChange={e => updateRole.mutate({ id: m.id, role: e.target.value })}
+                      style={{ fontSize: 12, padding: '3px 8px', width: 'auto' }}
+                    >
+                      {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: 12, color: m.is_active ? 'var(--success)' : 'var(--text-muted)' }}>
+                      {m.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

@@ -1,25 +1,29 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Plus, Search, Users } from 'lucide-react'
 import { get, post } from '../../api'
 import Spinner from '../../components/Spinner'
 import Badge from '../../components/Badge'
 import EmptyState from '../../components/EmptyState'
 import Modal from '../../components/Modal'
-import { Users } from 'lucide-react'
 
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']
 
 export default function Leads() {
   const qc = useQueryClient()
   const [filter, setFilter] = useState('')
+  const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', company: '', email: '', phone: '', status: 'new', source: 'manual' })
 
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ['leads', filter],
-    queryFn: () => get('/leads', filter ? { status: filter } : {}),
+    queryKey: ['leads', filter, search],
+    queryFn: () => get('/leads', {
+      ...(filter ? { status: filter } : {}),
+      ...(search ? { q: search } : {}),
+      limit: 200,
+    }),
   })
 
   const create = useMutation({
@@ -33,8 +37,18 @@ export default function Leads() {
     <div>
       <div className="page-header">
         <div><h1>Leads</h1><p>{leads.length} records</p></div>
-        <div className="flex gap-2">
-          <select className="form-input" value={filter} onChange={e => setFilter(e.target.value)} style={{ width: 160 }}>
+        <div className="flex gap-2 items-center">
+          <div style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <input
+              className="form-input"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search leads…"
+              style={{ width: 200, paddingLeft: 32 }}
+            />
+          </div>
+          <select className="form-input" value={filter} onChange={e => setFilter(e.target.value)} style={{ width: 150 }}>
             <option value="">All statuses</option>
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>

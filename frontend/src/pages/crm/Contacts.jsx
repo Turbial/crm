@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Users } from 'lucide-react'
+import { Plus, Search, Users } from 'lucide-react'
 import { get, post } from '../../api'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
@@ -11,11 +11,12 @@ export default function Contacts() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', title: '' })
+  const [search, setSearch] = useState('')
+  const [form, setForm] = useState({ name: '', email: '', phone: '', title: '' })
 
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ['contacts'],
-    queryFn: () => get('/contacts'),
+    queryKey: ['contacts', search],
+    queryFn: () => get('/contacts', { ...(search ? { q: search } : {}), limit: 200 }),
   })
 
   const create = useMutation({
@@ -29,7 +30,19 @@ export default function Contacts() {
     <div>
       <div className="page-header">
         <div><h1>Contacts</h1><p>{contacts.length} records</p></div>
-        <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> New Contact</button>
+        <div className="flex gap-2 items-center">
+          <div style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <input
+              className="form-input"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search contacts…"
+              style={{ width: 200, paddingLeft: 32 }}
+            />
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> New Contact</button>
+        </div>
       </div>
 
       {contacts.length === 0
@@ -62,7 +75,7 @@ export default function Contacts() {
             {create.isPending ? 'Creating…' : 'Create'}
           </button>
         </>}>
-        {[['name', 'Name *'], ['email', 'Email'], ['phone', 'Phone'], ['company', 'Company'], ['title', 'Title']].map(([k, l]) => (
+        {[['name', 'Name *'], ['email', 'Email'], ['phone', 'Phone'], ['title', 'Title']].map(([k, l]) => (
           <div key={k} className="form-group">
             <label className="form-label">{l}</label>
             <input className="form-input" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />

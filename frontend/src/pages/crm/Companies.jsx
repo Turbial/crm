@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Building2 } from 'lucide-react'
+import { Plus, Search, Building2 } from 'lucide-react'
 import { get, post } from '../../api'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
@@ -11,11 +11,12 @@ export default function Companies() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
+  const [search, setSearch] = useState('')
   const [form, setForm] = useState({ name: '', domain: '', industry: '', size: '', website: '' })
 
   const { data: companies = [], isLoading } = useQuery({
-    queryKey: ['companies'],
-    queryFn: () => get('/companies'),
+    queryKey: ['companies', search],
+    queryFn: () => get('/companies', { ...(search ? { q: search } : {}), limit: 200 }),
   })
 
   const create = useMutation({
@@ -29,7 +30,19 @@ export default function Companies() {
     <div>
       <div className="page-header">
         <div><h1>Companies</h1><p>{companies.length} records</p></div>
-        <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> New Company</button>
+        <div className="flex gap-2 items-center">
+          <div style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <input
+              className="form-input"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search companies…"
+              style={{ width: 200, paddingLeft: 32 }}
+            />
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> New Company</button>
+        </div>
       </div>
 
       {companies.length === 0
