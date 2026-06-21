@@ -4,6 +4,9 @@ import {
   LayoutDashboard, Users, Building2, Briefcase, FolderOpen,
   MessageSquare, Zap, CheckSquare, Bell, AlertTriangle,
   FileText, Copy, LogOut, Settings, Search, Sparkles,
+  BarChart2, Megaphone, GitBranch, Mail, Clock, Phone,
+  Package, FileCheck, CalendarDays, Globe, Webhook,
+  CreditCard, Activity, ScrollText, Layers,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
@@ -23,9 +26,28 @@ const NAV = [
     ],
   },
   {
+    section: 'Sales',
+    items: [
+      { label: 'Appointments', to: '/sales/appointments', icon: CalendarDays },
+      { label: 'Products', to: '/sales/products', icon: Package },
+      { label: 'Quotes', to: '/sales/quotes', icon: FileCheck },
+      { label: 'Call Logs', to: '/sales/calls', icon: Phone },
+    ],
+  },
+  {
+    section: 'Marketing',
+    items: [
+      { label: 'Campaigns', to: '/marketing/campaigns', icon: Megaphone },
+      { label: 'Sequences', to: '/marketing/sequences', icon: GitBranch },
+      { label: 'Email Templates', to: '/marketing/email-templates', icon: Mail },
+      { label: 'Scheduled', to: '/marketing/scheduled', icon: Clock },
+    ],
+  },
+  {
     section: 'Projects',
     items: [
       { label: 'Projects', to: '/pm/projects', icon: FolderOpen },
+      { label: 'PM Executive', to: '/pm/executive', icon: Layers },
     ],
   },
   {
@@ -37,12 +59,23 @@ const NAV = [
       { label: 'Supervisor', to: '/supervisor', icon: AlertTriangle },
       { label: 'Daily Brief', to: '/daily-brief', icon: FileText },
       { label: 'Duplicates', to: '/duplicates', icon: Copy },
+      { label: 'Activity Feed', to: '/activity', icon: Activity },
       { label: 'Notifications', to: '/notifications', icon: Bell },
+    ],
+  },
+  {
+    section: 'Analytics',
+    items: [
+      { label: 'Analytics', to: '/analytics', icon: BarChart2 },
     ],
   },
   {
     section: 'Admin',
     items: [
+      { label: 'Webhooks', to: '/webhooks', icon: Webhook },
+      { label: 'Integrations', to: '/integrations', icon: Globe },
+      { label: 'Billing', to: '/billing', icon: CreditCard },
+      { label: 'Audit Log', to: '/audit', icon: ScrollText },
       { label: 'Settings', to: '/settings', icon: Settings },
     ],
   },

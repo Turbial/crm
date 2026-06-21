@@ -6,6 +6,8 @@ import Spinner from './components/Spinner'
 
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+
+// CRM
 import Leads from './pages/crm/Leads'
 import LeadDetail from './pages/crm/LeadDetail'
 import Contacts from './pages/crm/Contacts'
@@ -14,8 +16,25 @@ import Companies from './pages/crm/Companies'
 import CompanyDetail from './pages/crm/CompanyDetail'
 import Deals from './pages/crm/Deals'
 import DealDetail from './pages/crm/DealDetail'
+
+// Sales
+import Appointments from './pages/sales/Appointments'
+import Products from './pages/sales/Products'
+import Quotes from './pages/sales/Quotes'
+import CallLogs from './pages/sales/CallLogs'
+
+// Marketing
+import Campaigns from './pages/marketing/Campaigns'
+import Sequences from './pages/marketing/Sequences'
+import EmailTemplates from './pages/marketing/EmailTemplates'
+import ScheduledMessages from './pages/marketing/ScheduledMessages'
+
+// PM
 import Projects from './pages/pm/Projects'
 import ProjectBoard from './pages/pm/ProjectBoard'
+import PMExecutive from './pages/pm/PMExecutive'
+
+// Operations
 import MessengerInbox from './pages/messenger/MessengerInbox'
 import ConversationView from './pages/messenger/ConversationView'
 import ActionRuns from './pages/actions/ActionRuns'
@@ -23,26 +42,44 @@ import Approvals from './pages/actions/Approvals'
 import Supervisor from './pages/Supervisor'
 import DailyBrief from './pages/DailyBrief'
 import Duplicates from './pages/Duplicates'
+import ActivityFeed from './pages/ActivityFeed'
 import Notifications from './pages/Notifications'
+
+// Analytics & Admin
+import Analytics from './pages/Analytics'
+import Webhooks from './pages/Webhooks'
+import Integrations from './pages/Integrations'
+import Billing from './pages/Billing'
+import AuditLog from './pages/AuditLog'
 import Settings from './pages/Settings'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 })
 
-// Route titles for the topbar
 const TITLES = {
   '/dashboard': 'Dashboard',
   '/crm/leads': 'Leads', '/crm/contacts': 'Contacts', '/crm/companies': 'Companies', '/crm/deals': 'Deals',
   '/crm/leads/': 'Lead', '/crm/contacts/': 'Contact', '/crm/companies/': 'Company', '/crm/deals/': 'Deal',
-  '/pm/projects': 'Projects',
+  '/sales/appointments': 'Appointments', '/sales/products': 'Products & Services',
+  '/sales/quotes': 'Quotes', '/sales/calls': 'Call Logs',
+  '/marketing/campaigns': 'Campaigns', '/marketing/sequences': 'Sequences',
+  '/marketing/email-templates': 'Email Templates', '/marketing/scheduled': 'Scheduled Messages',
+  '/pm/projects': 'Projects', '/pm/executive': 'PM Executive',
+  '/pm/projects/': 'Project Board',
   '/messenger': 'Messenger',
   '/actions': 'Action Runs',
   '/approvals': 'Approvals',
   '/supervisor': 'Supervisor',
   '/daily-brief': 'Daily Brief',
   '/duplicates': 'Duplicates',
+  '/activity': 'Activity Feed',
   '/notifications': 'Notifications',
+  '/analytics': 'Analytics',
+  '/webhooks': 'Webhooks',
+  '/integrations': 'Integrations',
+  '/billing': 'Billing',
+  '/audit': 'Audit Log',
   '/settings': 'Settings',
 }
 
@@ -62,6 +99,8 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* CRM */}
         <Route path="/crm/leads" element={<Leads />} />
         <Route path="/crm/leads/:id" element={<LeadDetail />} />
         <Route path="/crm/contacts" element={<Contacts />} />
@@ -70,8 +109,25 @@ function AppRoutes() {
         <Route path="/crm/companies/:id" element={<CompanyDetail />} />
         <Route path="/crm/deals" element={<Deals />} />
         <Route path="/crm/deals/:id" element={<DealDetail />} />
+
+        {/* Sales */}
+        <Route path="/sales/appointments" element={<Appointments />} />
+        <Route path="/sales/products" element={<Products />} />
+        <Route path="/sales/quotes" element={<Quotes />} />
+        <Route path="/sales/calls" element={<CallLogs />} />
+
+        {/* Marketing */}
+        <Route path="/marketing/campaigns" element={<Campaigns />} />
+        <Route path="/marketing/sequences" element={<Sequences />} />
+        <Route path="/marketing/email-templates" element={<EmailTemplates />} />
+        <Route path="/marketing/scheduled" element={<ScheduledMessages />} />
+
+        {/* PM */}
         <Route path="/pm/projects" element={<Projects />} />
         <Route path="/pm/projects/:id" element={<ProjectBoard />} />
+        <Route path="/pm/executive" element={<PMExecutive />} />
+
+        {/* Operations */}
         <Route path="/messenger" element={<MessengerInbox />} />
         <Route path="/messenger/:id" element={<ConversationView />} />
         <Route path="/actions" element={<ActionRuns />} />
@@ -79,7 +135,15 @@ function AppRoutes() {
         <Route path="/supervisor" element={<Supervisor />} />
         <Route path="/daily-brief" element={<DailyBrief />} />
         <Route path="/duplicates" element={<Duplicates />} />
+        <Route path="/activity" element={<ActivityFeed />} />
         <Route path="/notifications" element={<Notifications />} />
+
+        {/* Analytics & Admin */}
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/webhooks" element={<Webhooks />} />
+        <Route path="/integrations" element={<Integrations />} />
+        <Route path="/billing" element={<Billing />} />
+        <Route path="/audit" element={<AuditLog />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
