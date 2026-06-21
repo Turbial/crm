@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, Any
 from app.models import LeadStatus, TaskStatus, TaskPriority, Channel, Direction, OpportunityStage, AgentActionStatus, UserRole
 
@@ -1441,14 +1441,14 @@ class MessengerChatOut(BaseModel):
 # ── Phase 3: AI Operations Platform ──────────────────────────────────────────
 
 class DuplicateCandidateOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
     id: str
     organization_id: str
     entity_type: str
-    entity_id_a: str
-    entity_id_b: str
+    entity_id_a: str = Field(validation_alias='entity_id')
+    entity_id_b: str = Field(validation_alias='candidate_id')
     score: float
-    matched_fields: list[str]
+    matched_fields: list[str] = Field(validation_alias='match_reasons', default=[])
     status: str
     resolved_by_user_id: Optional[str] = None
     resolved_at: Optional[datetime] = None

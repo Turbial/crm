@@ -91,7 +91,9 @@ function OrgSettings() {
 function SLARules() {
   const qc = useQueryClient()
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState({ entity_type: 'lead', field_name: 'updated_at', threshold_hours: 24, risk_level: 'medium', action_type: 'notify' })
+  const [editId, setEditId] = useState(null)
+  const [form, setForm] = useState({ name: '', entity_type: 'lead', sla_hours: 24, action_on_breach: 'notify', escalate_via: 'notification' })
+  const [editForm, setEditForm] = useState({})
 
   const { data: rules = [], isLoading } = useQuery({
     queryKey: ['settings', 'sla-rules'],
@@ -100,7 +102,16 @@ function SLARules() {
 
   const create = useMutation({
     mutationFn: () => post('/settings/sla-rules', form),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['settings', 'sla-rules'] }); setShowAdd(false) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'sla-rules'] })
+      setShowAdd(false)
+      setForm({ name: '', entity_type: 'lead', sla_hours: 24, action_on_breach: 'notify', escalate_via: 'notification' })
+    },
+  })
+
+  const update = useMutation({
+    mutationFn: ({ id, data }) => patch(`/settings/sla-rules/${id}`, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['settings', 'sla-rules'] }); setEditId(null) },
   })
 
   const remove = useMutation({
@@ -109,6 +120,11 @@ function SLARules() {
   })
 
   if (isLoading) return <Spinner />
+
+  function startEdit(r) {
+    setEditId(r.id)
+    setEditForm({ sla_hours: r.sla_hours, action_on_breach: r.action_on_breach, escalate_via: r.escalate_via })
+  }
 
   return (
     <div>
@@ -122,6 +138,10 @@ function SLARules() {
         <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
           <h4 style={{ marginTop: 0 }}>New SLA Rule</h4>
           <div className="form-group">
+            <label>Rule Name *</label>
+            <input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Lead follow-up SLA" autoFocus />
+          </div>
+          <div className="form-group">
             <label>Entity Type</label>
             <select className="form-input" value={form.entity_type} onChange={e => setForm(f => ({ ...f, entity_type: e.target.value }))}>
               <option value="lead">Lead</option>
@@ -130,26 +150,24 @@ function SLARules() {
             </select>
           </div>
           <div className="form-group">
-            <label>Field Name</label>
-            <input className="form-input" value={form.field_name} onChange={e => setForm(f => ({ ...f, field_name: e.target.value }))} />
+            <label>SLA Hours</label>
+            <input type="number" className="form-input" value={form.sla_hours} onChange={e => setForm(f => ({ ...f, sla_hours: Number(e.target.value) }))} min="1" />
           </div>
           <div className="form-group">
-            <label>Threshold (hours)</label>
-            <input type="number" className="form-input" value={form.threshold_hours} onChange={e => setForm(f => ({ ...f, threshold_hours: Number(e.target.value) }))} />
-          </div>
-          <div className="form-group">
-            <label>Risk Level</label>
-            <select className="form-input" value={form.risk_level} onChange={e => setForm(f => ({ ...f, risk_level: e.target.value }))}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
+            <label>Action on Breach</label>
+            <select className="form-input" value={form.action_on_breach} onChange={e => setForm(f => ({ ...f, action_on_breach: e.target.value }))}>
+              <option value="notify">Notify</option>
+              <option value="escalate">Escalate</option>
+              <option value="auto_execute">Auto Execute</option>
             </select>
           </div>
           <div className="flex gap-2">
-            <button className="btn btn-primary" onClick={() => create.mutate()} disabled={create.isPending}>Create</button>
+            <button className="btn btn-primary" onClick={() => create.mutate()} disabled={!form.name.trim() || create.isPending}>
+              {create.isPending ? 'Creating…' : 'Create'}
+            </button>
             <button className="btn btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
           </div>
+          {create.isError && <p style={{ color: 'var(--danger)', fontSize: 13, marginTop: 8 }}>{create.error?.message}</p>}
         </div>
       )}
 
@@ -160,20 +178,48 @@ function SLARules() {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Entity</th><th>Field</th><th>Threshold</th><th>Risk</th><th>Action</th><th></th></tr>
+                  <tr><th>Name</th><th>Entity</th><th>SLA Hours</th><th>On Breach</th><th>Active</th><th></th></tr>
                 </thead>
                 <tbody>
                   {rules.map(r => (
                     <tr key={r.id}>
-                      <td>{r.entity_type}</td>
-                      <td>{r.field_name}</td>
-                      <td>{r.threshold_hours}h</td>
-                      <td><span className={`badge badge-${r.risk_level === 'critical' ? 'red' : r.risk_level === 'high' ? 'orange' : 'blue'}`}>{r.risk_level}</span></td>
-                      <td>{r.action_type}</td>
+                      <td className="font-medium">{r.name}</td>
+                      <td className="td-muted">{r.entity_type}</td>
                       <td>
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => remove.mutate(r.id)} disabled={remove.isPending}>
-                          <Trash2 size={14} />
-                        </button>
+                        {editId === r.id
+                          ? <input type="number" className="form-input" value={editForm.sla_hours} onChange={e => setEditForm(f => ({ ...f, sla_hours: Number(e.target.value) }))} style={{ width: 80, padding: '3px 8px', fontSize: 13 }} />
+                          : `${r.sla_hours}h`}
+                      </td>
+                      <td>
+                        {editId === r.id
+                          ? (
+                            <select className="form-input" value={editForm.action_on_breach} onChange={e => setEditForm(f => ({ ...f, action_on_breach: e.target.value }))} style={{ fontSize: 12, padding: '3px 8px', width: 'auto' }}>
+                              <option value="notify">notify</option>
+                              <option value="escalate">escalate</option>
+                              <option value="auto_execute">auto_execute</option>
+                            </select>
+                          )
+                          : <span className="td-muted">{r.action_on_breach}</span>}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: 12, color: r.active ? 'var(--success)' : 'var(--text-muted)' }}>
+                          {r.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="flex gap-1">
+                          {editId === r.id ? (
+                            <>
+                              <button className="btn btn-primary btn-sm" onClick={() => update.mutate({ id: r.id, data: editForm })} disabled={update.isPending} style={{ fontSize: 12 }}>Save</button>
+                              <button className="btn btn-secondary btn-sm" onClick={() => setEditId(null)} style={{ fontSize: 12 }}>Cancel</button>
+                            </>
+                          ) : (
+                            <button className="btn btn-ghost btn-sm" onClick={() => startEdit(r)} style={{ fontSize: 12 }}>Edit</button>
+                          )}
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => remove.mutate(r.id)} disabled={remove.isPending}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

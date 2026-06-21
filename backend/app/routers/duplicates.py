@@ -51,7 +51,35 @@ def merge_leads(
     lead = _merge(db, user.organization_id, keep_id, merge_id, user.id)
     if not lead:
         raise HTTPException(status_code=404, detail="One or both leads not found")
-    return {"ok": True, "merged_into": lead.id, "lead_name": lead.name}
+    return {"ok": True, "merged_into": lead.id, "name": lead.name}
+
+
+@router.post("/merge-contacts")
+def merge_contacts(
+    keep_id: str,
+    merge_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_manager),
+):
+    from app.services.duplicate_service import merge_contacts as _merge
+    contact = _merge(db, user.organization_id, keep_id, merge_id, user.id)
+    if not contact:
+        raise HTTPException(status_code=404, detail="One or both contacts not found")
+    return {"ok": True, "merged_into": contact.id, "name": contact.name}
+
+
+@router.post("/merge-companies")
+def merge_companies(
+    keep_id: str,
+    merge_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_manager),
+):
+    from app.services.duplicate_service import merge_companies as _merge
+    company = _merge(db, user.organization_id, keep_id, merge_id, user.id)
+    if not company:
+        raise HTTPException(status_code=404, detail="One or both companies not found")
+    return {"ok": True, "merged_into": company.id, "name": company.name}
 
 
 @router.post("/scan-lead/{lead_id}")

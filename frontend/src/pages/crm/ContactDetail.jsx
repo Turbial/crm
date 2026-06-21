@@ -9,7 +9,6 @@ const FIELDS = [
   ['name', 'Name', 'text'],
   ['email', 'Email', 'email'],
   ['phone', 'Phone', 'text'],
-  ['company', 'Company', 'text'],
   ['title', 'Title', 'text'],
 ]
 
@@ -38,7 +37,7 @@ export default function ContactDetail() {
   if (isLoading) return <Spinner />
   if (!contact) return <p className="text-muted">Contact not found.</p>
 
-  function startEdit() { setForm({ name: contact.name, email: contact.email, phone: contact.phone, company: contact.company, title: contact.title }); setEditing(true) }
+  function startEdit() { setForm({ name: contact.name, email: contact.email, phone: contact.phone, title: contact.title }); setEditing(true) }
 
   return (
     <div>

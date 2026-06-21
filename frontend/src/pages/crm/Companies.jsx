@@ -16,7 +16,7 @@ export default function Companies() {
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ['companies', search],
-    queryFn: () => get('/companies', { ...(search ? { q: search } : {}), limit: 200 }),
+    queryFn: () => get('/companies', { ...(search ? { search } : {}), limit: 200 }),
   })
 
   const create = useMutation({

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Briefcase } from 'lucide-react'
+import { Plus, Briefcase, Search } from 'lucide-react'
 import { get, post } from '../../api'
 import Spinner from '../../components/Spinner'
 import Badge from '../../components/Badge'
@@ -19,11 +19,12 @@ export default function Deals() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
+  const [search, setSearch] = useState('')
   const [form, setForm] = useState({ title: '', value: '', currency: 'USD', stage: 'lead', close_date: '' })
 
   const { data: deals = [], isLoading } = useQuery({
-    queryKey: ['deals'],
-    queryFn: () => get('/deals'),
+    queryKey: ['deals', search],
+    queryFn: () => get('/deals', { ...(search ? { q: search } : {}), limit: 200 }),
   })
 
   const create = useMutation({
@@ -46,7 +47,19 @@ export default function Deals() {
           <h1>Deals</h1>
           <p>{deals.length} deals · {fmt(totalValue)} total pipeline</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> New Deal</button>
+        <div className="flex gap-2 items-center">
+          <div style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <input
+              className="form-input"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search deals…"
+              style={{ width: 200, paddingLeft: 32 }}
+            />
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> New Deal</button>
+        </div>
       </div>
 
       {deals.length === 0

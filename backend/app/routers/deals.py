@@ -49,18 +49,21 @@ def list_deals(
     pipeline_id: str | None = Query(default=None),
     stage_id: str | None = Query(default=None),
     owner_user_id: str | None = Query(default=None),
+    q: str | None = Query(default=None),
     limit: int = Query(default=100, le=500),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    q = db.query(Deal).filter(Deal.organization_id == user.organization_id)
+    query = db.query(Deal).filter(Deal.organization_id == user.organization_id)
     if pipeline_id:
-        q = q.filter(Deal.pipeline_id == pipeline_id)
+        query = query.filter(Deal.pipeline_id == pipeline_id)
     if stage_id:
-        q = q.filter(Deal.stage_id == stage_id)
+        query = query.filter(Deal.stage_id == stage_id)
     if owner_user_id:
-        q = q.filter(Deal.owner_user_id == owner_user_id)
-    return q.order_by(Deal.created_at.desc()).limit(limit).all()
+        query = query.filter(Deal.owner_user_id == owner_user_id)
+    if q:
+        query = query.filter(Deal.title.ilike(f"%{q}%"))
+    return query.order_by(Deal.created_at.desc()).limit(limit).all()
 
 
 @router.get("/board")

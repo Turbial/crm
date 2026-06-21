@@ -232,3 +232,73 @@ def merge_leads(
     db.commit()
     db.refresh(keep)
     return keep
+
+
+def merge_contacts(
+    db: Session,
+    org_id: str,
+    keep_id: str,
+    merge_id: str,
+    user_id: str,
+) -> Contact | None:
+    """Merge merge_id into keep_id — copy missing fields, mark candidate merged."""
+    keep = db.query(Contact).filter(Contact.id == keep_id, Contact.organization_id == org_id).first()
+    merge_obj = db.query(Contact).filter(Contact.id == merge_id, Contact.organization_id == org_id).first()
+    if not keep or not merge_obj:
+        return None
+
+    for field in ("email", "phone", "title"):
+        if not getattr(keep, field, None) and getattr(merge_obj, field, None):
+            setattr(keep, field, getattr(merge_obj, field))
+
+    cand = db.query(DuplicateCandidate).filter(
+        DuplicateCandidate.organization_id == org_id,
+        DuplicateCandidate.entity_type == "contact",
+        DuplicateCandidate.entity_id == keep_id,
+        DuplicateCandidate.candidate_id == merge_id,
+    ).first()
+    if cand:
+        cand.status = DuplicateStatus.merged
+        cand.merged_into_id = keep_id
+        cand.resolved_by_user_id = user_id
+        cand.resolved_at = datetime.utcnow()
+
+    db.delete(merge_obj)
+    db.commit()
+    db.refresh(keep)
+    return keep
+
+
+def merge_companies(
+    db: Session,
+    org_id: str,
+    keep_id: str,
+    merge_id: str,
+    user_id: str,
+) -> Company | None:
+    """Merge merge_id into keep_id — copy missing fields, mark candidate merged."""
+    keep = db.query(Company).filter(Company.id == keep_id, Company.organization_id == org_id).first()
+    merge_obj = db.query(Company).filter(Company.id == merge_id, Company.organization_id == org_id).first()
+    if not keep or not merge_obj:
+        return None
+
+    for field in ("domain", "industry", "size", "website", "phone", "address"):
+        if not getattr(keep, field, None) and getattr(merge_obj, field, None):
+            setattr(keep, field, getattr(merge_obj, field))
+
+    cand = db.query(DuplicateCandidate).filter(
+        DuplicateCandidate.organization_id == org_id,
+        DuplicateCandidate.entity_type == "company",
+        DuplicateCandidate.entity_id == keep_id,
+        DuplicateCandidate.candidate_id == merge_id,
+    ).first()
+    if cand:
+        cand.status = DuplicateStatus.merged
+        cand.merged_into_id = keep_id
+        cand.resolved_by_user_id = user_id
+        cand.resolved_at = datetime.utcnow()
+
+    db.delete(merge_obj)
+    db.commit()
+    db.refresh(keep)
+    return keep

@@ -6,6 +6,12 @@ import Spinner from '../components/Spinner'
 import Badge from '../components/Badge'
 import EmptyState from '../components/EmptyState'
 
+const MERGE_ENDPOINTS = {
+  lead: 'merge-leads',
+  contact: 'merge-contacts',
+  company: 'merge-companies',
+}
+
 export default function Duplicates() {
   const qc = useQueryClient()
   const [entityType, setEntityType] = useState('')
@@ -21,7 +27,10 @@ export default function Duplicates() {
   })
 
   const merge = useMutation({
-    mutationFn: ({ keepId, mergeId }) => post(`/duplicates/merge-leads?keep_id=${encodeURIComponent(keepId)}&merge_id=${encodeURIComponent(mergeId)}`),
+    mutationFn: ({ keepId, mergeId, entityType }) => {
+      const endpoint = MERGE_ENDPOINTS[entityType]
+      return post(`/duplicates/${endpoint}?keep_id=${encodeURIComponent(keepId)}&merge_id=${encodeURIComponent(mergeId)}`)
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['duplicates'] }),
   })
 
@@ -65,9 +74,9 @@ export default function Duplicates() {
                           <button className="btn btn-secondary btn-sm" onClick={() => dismiss.mutate(c.id)} disabled={dismiss.isPending}>
                             Dismiss
                           </button>
-                          {c.entity_type === 'lead' && (
+                          {MERGE_ENDPOINTS[c.entity_type] && (
                             <button className="btn btn-danger btn-sm" disabled={merge.isPending}
-                              onClick={() => { if (window.confirm(`Merge ${c.entity_id_b.slice(0, 8)} into ${c.entity_id_a.slice(0, 8)}?`)) merge.mutate({ keepId: c.entity_id_a, mergeId: c.entity_id_b }) }}>
+                              onClick={() => { if (window.confirm(`Merge ${c.entity_id_b.slice(0, 8)} into ${c.entity_id_a.slice(0, 8)}?`)) merge.mutate({ keepId: c.entity_id_a, mergeId: c.entity_id_b, entityType: c.entity_type }) }}>
                               Merge →A
                             </button>
                           )}

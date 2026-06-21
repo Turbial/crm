@@ -4,11 +4,33 @@ import { get } from '../api'
 import Spinner from '../components/Spinner'
 import Badge from '../components/Badge'
 
-function StatCard({ label, value }) {
+const STAT_LINKS = {
+  leads: '/crm/leads',
+  total_leads: '/crm/leads',
+  contacts: '/crm/contacts',
+  total_contacts: '/crm/contacts',
+  companies: '/crm/companies',
+  total_companies: '/crm/companies',
+  deals: '/crm/deals',
+  total_deals: '/crm/deals',
+  projects: '/pm/projects',
+  total_projects: '/pm/projects',
+  action_runs: '/actions',
+  failed_runs: '/actions',
+  stuck_runs: '/actions',
+  pending_approvals: '/approvals',
+}
+
+function StatCard({ label, value, navigate }) {
   const danger = ['failed', 'stuck', 'overdue'].some(k => label.includes(k))
   const success = ['completed', 'won'].some(k => label.includes(k))
+  const link = STAT_LINKS[label]
   return (
-    <div className="card stat-card">
+    <div
+      className="card stat-card"
+      onClick={link ? () => navigate(link) : undefined}
+      style={{ cursor: link ? 'pointer' : undefined }}
+    >
       <span className="stat-label">{label.replace(/_/g, ' ')}</span>
       <span className="stat-value" style={{ color: danger ? 'var(--danger)' : success ? 'var(--success)' : undefined }}>
         {value ?? '—'}
@@ -57,13 +79,16 @@ export default function Dashboard() {
       </div>
 
       <div className="stats-grid">
-        {stats.map(([k, v]) => <StatCard key={k} label={k} value={String(v)} />)}
+        {stats.map(([k, v]) => <StatCard key={k} label={k} value={String(v)} navigate={navigate} />)}
       </div>
 
       <div className="grid-auto">
         {/* Pending approvals */}
         <div className="card">
-          <h3 className="font-semibold mb-4" style={{ fontSize: 14 }}>Pending Approvals</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold" style={{ fontSize: 14, margin: 0 }}>Pending Approvals</h3>
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => navigate('/approvals')}>View all</button>
+          </div>
           {approvals.length === 0
             ? <p className="text-muted text-sm">No pending approvals</p>
             : approvals.map(a => (
@@ -80,7 +105,10 @@ export default function Dashboard() {
 
         {/* Stuck runs */}
         <div className="card">
-          <h3 className="font-semibold mb-4" style={{ fontSize: 14 }}>Stuck Actions</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold" style={{ fontSize: 14, margin: 0 }}>Stuck Actions</h3>
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => navigate('/actions')}>View all</button>
+          </div>
           {stuckRuns.length === 0
             ? <p className="text-muted text-sm">All systems running smoothly</p>
             : stuckRuns.map(r => (
@@ -97,7 +125,10 @@ export default function Dashboard() {
 
         {/* Hot leads */}
         <div className="card">
-          <h3 className="font-semibold mb-4" style={{ fontSize: 14 }}>Recent Leads</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold" style={{ fontSize: 14, margin: 0 }}>Recent Leads</h3>
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: 12 }} onClick={() => navigate('/crm/leads')}>View all</button>
+          </div>
           {leads.length === 0
             ? <p className="text-muted text-sm">No leads yet</p>
             : leads.map(l => (
