@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Edit2, Save, X } from 'lucide-react'
 import { get, patch, del } from '../../api'
@@ -120,9 +120,6 @@ export default function DealDetail() {
                 ['Stage', deal.stage],
                 ['Probability', deal.probability != null ? `${deal.probability}%` : '—'],
                 ['Close Date', deal.close_date ? new Date(deal.close_date).toLocaleDateString() : '—'],
-                ['Lead', deal.lead_id || '—'],
-                ['Contact', deal.contact_id || '—'],
-                ['Company', deal.company_id || '—'],
                 ['Created', new Date(deal.created_at).toLocaleDateString()],
               ].map(([label, val]) => (
                 <div key={label} className="flex justify-between" style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -130,6 +127,30 @@ export default function DealDetail() {
                   <span className="font-medium">{val || '—'}</span>
                 </div>
               ))}
+              {deal.lead_id && (
+                <div className="flex justify-between" style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Lead</span>
+                  <Link to={`/crm/leads/${deal.lead_id}`} style={{ color: 'var(--accent)', fontSize: 13 }}>
+                    {deal.lead_id.slice(0, 8)}…
+                  </Link>
+                </div>
+              )}
+              {deal.contact_id && (
+                <div className="flex justify-between" style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Contact</span>
+                  <Link to={`/crm/contacts/${deal.contact_id}`} style={{ color: 'var(--accent)', fontSize: 13 }}>
+                    {deal.contact_id.slice(0, 8)}…
+                  </Link>
+                </div>
+              )}
+              {deal.company_id && (
+                <div className="flex justify-between" style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Company</span>
+                  <Link to={`/crm/companies/${deal.company_id}`} style={{ color: 'var(--accent)', fontSize: 13 }}>
+                    {deal.company_id.slice(0, 8)}…
+                  </Link>
+                </div>
+              )}
               {deal.notes && (
                 <div style={{ marginTop: 12, fontSize: 13 }}>
                   <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>Notes</div>

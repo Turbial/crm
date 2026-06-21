@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Edit2, Save, X } from 'lucide-react'
 import { get, patch, del } from '../../api'
 import Spinner from '../../components/Spinner'
+import Badge from '../../components/Badge'
+import Timeline from '../../components/Timeline'
 
 const FIELDS = [
   ['name', 'Name', 'text'],
@@ -22,6 +24,20 @@ export default function ContactDetail() {
   const { data: contact, isLoading } = useQuery({
     queryKey: ['contact', id],
     queryFn: () => get(`/contacts/${id}`),
+  })
+
+  const { data: timeline = [] } = useQuery({
+    queryKey: ['timeline', 'contact', id],
+    queryFn: () => get(`/timeline/contact/${id}`),
+    enabled: !!contact,
+    retry: false,
+  })
+
+  const { data: linkedLead } = useQuery({
+    queryKey: ['lead', contact?.lead_id],
+    queryFn: () => get(`/leads/${contact.lead_id}`),
+    enabled: !!contact?.lead_id,
+    retry: false,
   })
 
   const update = useMutation({
@@ -95,9 +111,29 @@ export default function ContactDetail() {
           </button>
         </div>
 
-        <div className="card">
-          <h3 className="font-semibold" style={{ fontSize: 14, marginBottom: 12 }}>Related</h3>
-          <p className="text-muted text-sm">Associated leads and deals will appear here.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {linkedLead && (
+            <div className="card" style={{ padding: 0 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <h3 className="font-semibold" style={{ fontSize: 14, margin: 0 }}>Linked Lead</h3>
+              </div>
+              <div
+                className="flex items-center justify-between"
+                style={{ padding: '10px 16px', cursor: 'pointer' }}
+                onClick={() => navigate(`/crm/leads/${linkedLead.id}`)}
+              >
+                <div>
+                  <div className="font-medium text-sm">{linkedLead.name}</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{linkedLead.company}</div>
+                </div>
+                <Badge label={linkedLead.status} />
+              </div>
+            </div>
+          )}
+          <div className="card">
+            <h3 className="font-semibold" style={{ fontSize: 14, marginBottom: 16 }}>Activity Timeline</h3>
+            <Timeline events={timeline} />
+          </div>
         </div>
       </div>
     </div>

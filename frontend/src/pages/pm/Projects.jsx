@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { FolderOpen, Plus, Sparkles, X } from 'lucide-react'
 import { get, post } from '../../api'
 import Spinner from '../../components/Spinner'
@@ -119,9 +119,9 @@ function NewProjectModal({ open, onClose, onCreated }) {
 
 export default function Projects() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [status, setStatus] = useState('')
   const [showNew, setShowNew] = useState(false)
-  const navigate = (id) => { window.location.href = `/pm/projects/${id}` }
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects', status],
@@ -193,7 +193,7 @@ export default function Projects() {
       <NewProjectModal
         open={showNew}
         onClose={() => setShowNew(false)}
-        onCreated={id => { qc.invalidateQueries({ queryKey: ['projects'] }); window.location.href = `/pm/projects/${id}` }}
+        onCreated={id => { qc.invalidateQueries({ queryKey: ['projects'] }); navigate(`/pm/projects/${id}`) }}
       />
     </div>
   )

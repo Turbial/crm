@@ -33,6 +33,13 @@ export default function CompanyDetail() {
     retry: false,
   })
 
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['company-contacts', id],
+    queryFn: () => get(`/companies/${id}/contacts`),
+    enabled: !!company,
+    retry: false,
+  })
+
   const update = useMutation({
     mutationFn: body => patch(`/companies/${id}`, body),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['company', id] }); setEditing(false) },
@@ -107,25 +114,44 @@ export default function CompanyDetail() {
           </button>
         </div>
 
-        <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <h3 className="font-semibold" style={{ fontSize: 14 }}>Associated Leads ({leads.length})</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="card" style={{ padding: 0 }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <h3 className="font-semibold" style={{ fontSize: 14, margin: 0 }}>Leads ({leads.length})</h3>
+            </div>
+            {leads.length === 0
+              ? <p className="text-muted text-sm" style={{ padding: 16 }}>No leads linked.</p>
+              : leads.map(l => (
+                <div key={l.id} className="flex items-center justify-between" style={{ padding: '10px 16px', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer' }}
+                  onClick={() => navigate(`/crm/leads/${l.id}`)}>
+                  <div>
+                    <div className="text-sm font-medium">{l.name}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{l.email}</div>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Badge label={l.status} />
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{l.score}</span>
+                  </div>
+                </div>
+              ))}
           </div>
-          {leads.length === 0
-            ? <p className="text-muted text-sm" style={{ padding: 16 }}>No leads linked to this company.</p>
-            : leads.map(l => (
-              <div key={l.id} className="flex items-center justify-between" style={{ padding: '10px 18px', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer' }}
-                onClick={() => navigate(`/crm/leads/${l.id}`)}>
-                <div>
-                  <div className="text-sm font-medium">{l.name}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{l.email}</div>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <Badge label={l.status} />
-                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{l.score}</span>
-                </div>
+
+          {contacts.length > 0 && (
+            <div className="card" style={{ padding: 0 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <h3 className="font-semibold" style={{ fontSize: 14, margin: 0 }}>Contacts ({contacts.length})</h3>
               </div>
-            ))}
+              {contacts.map(c => (
+                <div key={c.id} className="flex items-center justify-between" style={{ padding: '10px 16px', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer' }}
+                  onClick={() => navigate(`/crm/contacts/${c.id}`)}>
+                  <div>
+                    <div className="text-sm font-medium">{c.name}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.email || c.title}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
