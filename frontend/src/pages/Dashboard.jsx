@@ -6,19 +6,12 @@ import Badge from '../components/Badge'
 
 const STAT_LINKS = {
   leads: '/crm/leads',
-  total_leads: '/crm/leads',
-  contacts: '/crm/contacts',
-  total_contacts: '/crm/contacts',
-  companies: '/crm/companies',
-  total_companies: '/crm/companies',
-  deals: '/crm/deals',
-  total_deals: '/crm/deals',
+  opportunities: '/crm/deals',
   projects: '/pm/projects',
-  total_projects: '/pm/projects',
-  action_runs: '/actions',
-  failed_runs: '/actions',
-  stuck_runs: '/actions',
-  pending_approvals: '/approvals',
+  agent_actions: '/actions',
+  automation_runs: '/actions',
+  pm_open_tasks: '/pm/projects',
+  pm_pending_approvals: '/approvals',
 }
 
 function StatCard({ label, value, navigate }) {

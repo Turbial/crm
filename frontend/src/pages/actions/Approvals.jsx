@@ -64,7 +64,7 @@ export default function Approvals() {
                             </button>
                           </div>
                         )}
-                        {a.note && <div className="text-xs td-muted mt-1">"{a.note}"</div>}
+                        {a.decision_note && <div className="text-xs td-muted mt-1">"{a.decision_note}"</div>}
                       </td>
                     </tr>
                   ))}

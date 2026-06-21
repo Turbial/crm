@@ -5,6 +5,7 @@ import {
   ArrowLeft, Send, Zap, CheckCircle, Clock, User,
   Building2, ChevronRight, AlertCircle,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { get, post } from '../../api'
 import Spinner from '../../components/Spinner'
 import Badge from '../../components/Badge'
@@ -320,28 +321,28 @@ export default function ConversationView() {
               <div className="sidebar-section-title">Linked to</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {convo.lead_id && (
-                  <a
-                    href={`/crm/leads/${convo.lead_id}`}
+                  <Link
+                    to={`/crm/leads/${convo.lead_id}`}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--accent)' }}
                   >
                     <User size={13} /> Lead <ChevronRight size={12} style={{ marginLeft: 'auto' }} />
-                  </a>
+                  </Link>
                 )}
                 {convo.contact_id && (
-                  <a
-                    href={`/crm/contacts/${convo.contact_id}`}
+                  <Link
+                    to={`/crm/contacts/${convo.contact_id}`}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--accent)' }}
                   >
                     <User size={13} /> Contact <ChevronRight size={12} style={{ marginLeft: 'auto' }} />
-                  </a>
+                  </Link>
                 )}
                 {convo.company_id && (
-                  <a
-                    href={`/crm/companies/${convo.company_id}`}
+                  <Link
+                    to={`/crm/companies/${convo.company_id}`}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--accent)' }}
                   >
                     <Building2 size={13} /> Company <ChevronRight size={12} style={{ marginLeft: 'auto' }} />
-                  </a>
+                  </Link>
                 )}
               </div>
             </>
