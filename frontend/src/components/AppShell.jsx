@@ -6,7 +6,9 @@ import {
   FileText, Copy, LogOut, Settings, Search, Sparkles,
   BarChart2, Megaphone, GitBranch, Mail, Clock, Phone,
   Package, FileCheck, CalendarDays, Globe, Webhook,
-  CreditCard, Activity, ScrollText, Layers,
+  CreditCard, Activity, ScrollText, Layers, TrendingUp,
+  ListTodo, MessageCircle, StickyNote, Star, Workflow,
+  Inbox, ExternalLink, Files, Brain, Database,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
@@ -23,6 +25,10 @@ const NAV = [
       { label: 'Contacts', to: '/crm/contacts', icon: Users },
       { label: 'Companies', to: '/crm/companies', icon: Building2 },
       { label: 'Deals', to: '/crm/deals', icon: Briefcase },
+      { label: 'Opportunities', to: '/crm/opportunities', icon: TrendingUp },
+      { label: 'Tasks', to: '/crm/tasks', icon: ListTodo },
+      { label: 'Communications', to: '/crm/communications', icon: MessageCircle },
+      { label: 'Notes', to: '/crm/notes', icon: StickyNote },
     ],
   },
   {
@@ -32,6 +38,7 @@ const NAV = [
       { label: 'Products', to: '/sales/products', icon: Package },
       { label: 'Quotes', to: '/sales/quotes', icon: FileCheck },
       { label: 'Call Logs', to: '/sales/calls', icon: Phone },
+      { label: 'Reviews', to: '/sales/reviews', icon: Star },
     ],
   },
   {
@@ -54,6 +61,8 @@ const NAV = [
     section: 'Operations',
     items: [
       { label: 'Messenger', to: '/messenger', icon: MessageSquare },
+      { label: 'Inbox Threads', to: '/inbox', icon: Inbox },
+      { label: 'Workflows', to: '/workflows', icon: Workflow },
       { label: 'Action Runs', to: '/actions', icon: Zap },
       { label: 'Approvals', to: '/approvals', icon: CheckSquare },
       { label: 'Supervisor', to: '/supervisor', icon: AlertTriangle },
@@ -67,11 +76,15 @@ const NAV = [
     section: 'Analytics',
     items: [
       { label: 'Analytics', to: '/analytics', icon: BarChart2 },
+      { label: 'Intelligence', to: '/intelligence', icon: Brain },
     ],
   },
   {
     section: 'Admin',
     items: [
+      { label: 'Customer Portal', to: '/portal', icon: ExternalLink },
+      { label: 'Files', to: '/files', icon: Files },
+      { label: 'Agent Memory', to: '/agent-memory', icon: Database },
       { label: 'Webhooks', to: '/webhooks', icon: Webhook },
       { label: 'Integrations', to: '/integrations', icon: Globe },
       { label: 'Billing', to: '/billing', icon: CreditCard },

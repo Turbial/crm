@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Settings as SettingsIcon, Plus, Trash2, Save, Key, Copy, Check, Eye, EyeOff, Sparkles, CheckCircle, XCircle, Loader } from 'lucide-react'
+import { Settings as SettingsIcon, Plus, Trash2, Save, Key, Copy, Check, Eye, EyeOff, Sparkles, CheckCircle, XCircle, Loader, ShieldCheck } from 'lucide-react'
 import { get, post, patch, del } from '../api'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 
-const TABS = ['Organization', 'SLA Rules', 'Custom Fields', 'Members', 'API Keys', 'AI']
+const TABS = ['Organization', 'SLA Rules', 'Custom Fields', 'Members', 'API Keys', 'AI', 'Permissions']
 
 export default function Settings() {
   const [tab, setTab] = useState('Organization')
@@ -40,6 +40,7 @@ export default function Settings() {
       {tab === 'Members' && <Members />}
       {tab === 'API Keys' && <ApiKeys />}
       {tab === 'AI' && <AISettings />}
+      {tab === 'Permissions' && <RecordPermissions />}
     </div>
   )
 }
@@ -876,6 +877,197 @@ function AISettings() {
           and <code>GOOGLE_API_KEY</code> from environment variables automatically. Keys saved here take precedence per organization.
         </p>
       </div>
+    </div>
+  )
+}
+
+const PERMISSION_BADGE_COLOR = { read: 'blue', write: 'green', deny: 'red' }
+const ENTITY_TYPES = ['lead', 'contact', 'company', 'deal', 'project']
+
+function RecordPermissions() {
+  const qc = useQueryClient()
+  const [entityType, setEntityType] = useState('')
+  const [entityId, setEntityId] = useState('')
+  const [loaded, setLoaded] = useState(false)
+  const [showGrant, setShowGrant] = useState(false)
+  const [grantForm, setGrantForm] = useState({ user_id: '', field_key: '', permission: 'read' })
+
+  const { data: perms = [], isLoading, refetch } = useQuery({
+    queryKey: ['record-permissions', entityType, entityId],
+    queryFn: () => get(`/record-permissions/${entityType}/${entityId}`),
+    enabled: false,
+    retry: false,
+  })
+
+  const grant = useMutation({
+    mutationFn: () => post(`/record-permissions/${entityType}/${entityId}`, grantForm),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['record-permissions', entityType, entityId] })
+      refetch()
+      setShowGrant(false)
+      setGrantForm({ user_id: '', field_key: '', permission: 'read' })
+    },
+  })
+
+  const remove = useMutation({
+    mutationFn: ({ userId, fieldKey }) => del(
+      `/record-permissions/${entityType}/${entityId}?user_id=${encodeURIComponent(userId)}&field_key=${encodeURIComponent(fieldKey)}`
+    ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['record-permissions', entityType, entityId] })
+      refetch()
+    },
+  })
+
+  function handleLoad() {
+    if (!entityType || !entityId.trim()) return
+    setLoaded(true)
+    refetch()
+  }
+
+  const canLoad = entityType && entityId.trim()
+  const showEmpty = !loaded || (!isLoading && perms.length === 0)
+
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 20, maxWidth: 560 }}>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>Lookup Record Permissions</h3>
+        <div className="flex gap-2 items-end">
+          <div className="form-group" style={{ marginBottom: 0, flex: '0 0 160px' }}>
+            <label className="form-label">Entity Type</label>
+            <select className="form-input" value={entityType} onChange={e => { setEntityType(e.target.value); setLoaded(false) }}>
+              <option value="">— select —</option>
+              {ENTITY_TYPES.map(et => <option key={et} value={et}>{et}</option>)}
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+            <label className="form-label">Entity ID</label>
+            <input
+              className="form-input"
+              value={entityId}
+              onChange={e => { setEntityId(e.target.value); setLoaded(false) }}
+              placeholder="UUID or ID"
+            />
+          </div>
+          <button className="btn btn-primary" disabled={!canLoad || isLoading} onClick={handleLoad}>
+            {isLoading ? 'Loading…' : 'Load'}
+          </button>
+        </div>
+      </div>
+
+      {!loaded ? (
+        <EmptyState
+          icon={ShieldCheck}
+          title="Load entity permissions first"
+          description="Select an entity type and enter an entity ID above, then click Load."
+        />
+      ) : isLoading ? (
+        <Spinner />
+      ) : (
+        <div>
+          <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {perms.length} permission{perms.length !== 1 ? 's' : ''} for {entityType}/{entityId.slice(0, 8)}
+            </span>
+            <button className="btn btn-primary" onClick={() => setShowGrant(true)}>
+              Grant Permission
+            </button>
+          </div>
+
+          {perms.length === 0 ? (
+            <EmptyState
+              icon={ShieldCheck}
+              title="No permissions set"
+              description="All users have default access. Grant explicit permissions below."
+            />
+          ) : (
+            <div className="card" style={{ padding: 0 }}>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>User ID</th><th>Field Key</th><th>Permission</th><th>Granted By</th><th>Created</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {perms.map(p => (
+                      <tr key={p.id}>
+                        <td className="td-muted" style={{ fontFamily: 'monospace', fontSize: 12 }}>{p.user_id ? p.user_id.slice(0, 8) : '—'}</td>
+                        <td><code style={{ fontSize: 12 }}>{p.field_key}</code></td>
+                        <td><Badge label={p.permission} color={PERMISSION_BADGE_COLOR[p.permission] || 'gray'} /></td>
+                        <td className="td-muted" style={{ fontFamily: 'monospace', fontSize: 12 }}>{p.granted_by_id ? p.granted_by_id.slice(0, 8) : '—'}</td>
+                        <td className="td-muted">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
+                        <td>
+                          <button
+                            className="btn btn-ghost btn-icon btn-sm"
+                            onClick={() => {
+                              if (window.confirm(`Remove permission for field "${p.field_key}"?`)) {
+                                remove.mutate({ userId: p.user_id, fieldKey: p.field_key })
+                              }
+                            }}
+                            disabled={remove.isPending}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showGrant && (
+        <div className="modal-overlay" onClick={() => setShowGrant(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2>Grant Permission</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setShowGrant(false)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">User ID *</label>
+                <input
+                  className="form-input"
+                  autoFocus
+                  value={grantForm.user_id}
+                  onChange={e => setGrantForm(f => ({ ...f, user_id: e.target.value }))}
+                  placeholder="User UUID"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Field Key *</label>
+                <input
+                  className="form-input"
+                  value={grantForm.field_key}
+                  onChange={e => setGrantForm(f => ({ ...f, field_key: e.target.value }))}
+                  placeholder="e.g. email or * for all fields"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Permission</label>
+                <select className="form-input" value={grantForm.permission} onChange={e => setGrantForm(f => ({ ...f, permission: e.target.value }))}>
+                  <option value="read">read</option>
+                  <option value="write">write</option>
+                  <option value="deny">deny</option>
+                </select>
+              </div>
+              {grant.isError && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{grant.error?.message}</p>}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowGrant(false)}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                disabled={!grantForm.user_id.trim() || !grantForm.field_key.trim() || grant.isPending}
+                onClick={() => grant.mutate()}
+              >
+                {grant.isPending ? 'Granting…' : 'Grant'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

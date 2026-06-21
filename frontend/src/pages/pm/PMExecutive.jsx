@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { LayoutDashboard, FolderOpen, Plus } from 'lucide-react'
+import { LayoutDashboard, FolderOpen, Plus, Users, Zap } from 'lucide-react'
 import { get, post } from '../../api'
 import Spinner from '../../components/Spinner'
 import Badge from '../../components/Badge'
@@ -229,6 +229,238 @@ function PortfoliosTab() {
   )
 }
 
+function WorkloadTab() {
+  const qc = useQueryClient()
+  const [showAllocate, setShowAllocate] = useState(false)
+  const [form, setForm] = useState({ user_id: '', project_id: '', allocated_hours: '', week_start: '' })
+
+  const { data: workload, isLoading } = useQuery({
+    queryKey: ['pm-workload'],
+    queryFn: () => get('/pm/workload'),
+    retry: false,
+  })
+
+  const allocate = useMutation({
+    mutationFn: () => post('/pm/workload', {
+      user_id: form.user_id,
+      project_id: form.project_id,
+      allocated_hours: Number(form.allocated_hours),
+      week_start: form.week_start,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pm-workload'] })
+      setShowAllocate(false)
+      setForm({ user_id: '', project_id: '', allocated_hours: '', week_start: '' })
+    },
+  })
+
+  if (isLoading) return <Spinner />
+
+  const allocations = workload?.allocations ?? []
+  const summary = workload?.summary ?? {}
+
+  return (
+    <div>
+      <div className="stats-grid" style={{ marginBottom: 20 }}>
+        <div className="stat-card">
+          <span className="stat-label">total users</span>
+          <span className="stat-value">{summary.total_users ?? 0}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">avg utilization</span>
+          <span className="stat-value">{summary.avg_utilization != null ? `${Math.round(summary.avg_utilization)}%` : '—'}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Allocations</h2>
+        <button className="btn btn-primary" onClick={() => setShowAllocate(true)}>
+          Allocate
+        </button>
+      </div>
+
+      {allocations.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No workload allocations"
+          description="Allocate team members to projects to track utilization."
+        />
+      ) : (
+        <div className="card" style={{ padding: 0 }}>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>User</th><th>Project</th><th>Allocated h</th><th>Actual h</th><th>Utilization</th><th>Week</th></tr>
+              </thead>
+              <tbody>
+                {allocations.map((a, i) => {
+                  const util = a.allocated_hours > 0 ? Math.min(Math.round((a.actual_hours / a.allocated_hours) * 100), 100) : 0
+                  return (
+                    <tr key={i}>
+                      <td className="font-medium">{a.user_name || (a.user_id ? a.user_id.slice(0, 8) : '—')}</td>
+                      <td className="td-muted">{a.project_id ? a.project_id.slice(0, 8) : '—'}</td>
+                      <td>{a.allocated_hours ?? '—'}</td>
+                      <td>{a.actual_hours ?? '—'}</td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs" style={{ color: 'var(--text-muted)', minWidth: 36 }}>{util}%</span>
+                          <div style={{ background: 'var(--border-subtle)', borderRadius: 4, height: 8, overflow: 'hidden', minWidth: 80 }}>
+                            <div style={{ width: `${util}%`, height: '100%', background: util > 90 ? 'var(--danger)' : 'var(--accent)', borderRadius: 4 }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="td-muted">{a.week_start ? new Date(a.week_start).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <Modal
+        open={showAllocate}
+        onClose={() => setShowAllocate(false)}
+        title="Allocate Hours"
+        footer={
+          <>
+            <button className="btn btn-secondary" onClick={() => setShowAllocate(false)}>Cancel</button>
+            <button
+              className="btn btn-primary"
+              disabled={!form.user_id.trim() || !form.project_id.trim() || !form.allocated_hours || allocate.isPending}
+              onClick={() => allocate.mutate()}
+            >
+              {allocate.isPending ? 'Saving…' : 'Allocate'}
+            </button>
+          </>
+        }
+      >
+        <div className="form-group">
+          <label className="form-label">User ID *</label>
+          <input className="form-input" autoFocus value={form.user_id} onChange={e => setForm(f => ({ ...f, user_id: e.target.value }))} placeholder="User UUID" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Project ID *</label>
+          <input className="form-input" value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))} placeholder="Project UUID" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Allocated Hours *</label>
+          <input type="number" className="form-input" value={form.allocated_hours} onChange={e => setForm(f => ({ ...f, allocated_hours: e.target.value }))} placeholder="e.g. 40" min="0" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Week Start</label>
+          <input type="date" className="form-input" value={form.week_start} onChange={e => setForm(f => ({ ...f, week_start: e.target.value }))} />
+        </div>
+        {allocate.isError && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{allocate.error?.message}</p>}
+      </Modal>
+    </div>
+  )
+}
+
+const TRIGGER_OPTIONS = ['task_created', 'task_completed', 'sprint_started', 'sprint_ended', 'risk_added']
+
+function AutomationTab() {
+  const qc = useQueryClient()
+  const [form, setForm] = useState({ name: '', trigger: 'task_created', conditions: '', actions: '' })
+  const [saved, setSaved] = useState(false)
+
+  const { data: rules } = useQuery({
+    queryKey: ['pm-automation-rules'],
+    queryFn: () => get('/pm/automation-rules'),
+    retry: false,
+  })
+
+  const create = useMutation({
+    mutationFn: () => {
+      let conditions = form.conditions.trim() ? JSON.parse(form.conditions) : {}
+      let actions = form.actions.trim() ? JSON.parse(form.actions) : []
+      return post('/pm/automation-rules', { name: form.name, trigger: form.trigger, conditions, actions })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pm-automation-rules'] })
+      setSaved(true)
+      setForm({ name: '', trigger: 'task_created', conditions: '', actions: '' })
+      setTimeout(() => setSaved(false), 3000)
+    },
+  })
+
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 20, maxWidth: 560 }}>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>Create Automation Rule</h3>
+        <div className="form-group">
+          <label className="form-label">Name *</label>
+          <input
+            className="form-input"
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            placeholder="e.g. Notify on task complete"
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Trigger</label>
+          <select className="form-input" value={form.trigger} onChange={e => setForm(f => ({ ...f, trigger: e.target.value }))}>
+            {TRIGGER_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Conditions (JSON)</label>
+          <textarea
+            className="form-input"
+            rows={3}
+            value={form.conditions}
+            onChange={e => setForm(f => ({ ...f, conditions: e.target.value }))}
+            placeholder='e.g. {"priority": "high"}'
+            style={{ fontFamily: 'monospace', fontSize: 12, resize: 'vertical' }}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Actions (JSON)</label>
+          <textarea
+            className="form-input"
+            rows={3}
+            value={form.actions}
+            onChange={e => setForm(f => ({ ...f, actions: e.target.value }))}
+            placeholder='e.g. [{"type": "notify", "target": "owner"}]'
+            style={{ fontFamily: 'monospace', fontSize: 12, resize: 'vertical' }}
+          />
+        </div>
+        {create.isError && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{create.error?.message}</p>}
+        <div className="flex items-center gap-3">
+          <button
+            className="btn btn-primary"
+            disabled={!form.name.trim() || create.isPending}
+            onClick={() => create.mutate()}
+          >
+            {create.isPending ? 'Saving…' : 'Save Rule'}
+          </button>
+          {saved && <span style={{ fontSize: 13, color: 'var(--success)' }}>Rule saved successfully.</span>}
+        </div>
+      </div>
+
+      {Array.isArray(rules) && rules.length > 0 && (
+        <div className="card">
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Existing Rules</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {rules.map(r => (
+              <div key={r.id} style={{ background: 'var(--bg-subtle)', borderRadius: 6, padding: '8px 12px', fontSize: 13 }}>
+                <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+                  <span className="font-medium">{r.name}</span>
+                  <Badge label={r.trigger} color="blue" />
+                </div>
+                <pre style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', overflow: 'auto' }}>
+                  {JSON.stringify({ conditions: r.conditions, actions: r.actions }, null, 2)}
+                </pre>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PMExecutive() {
   const [tab, setTab] = useState('overview')
 
@@ -237,6 +469,13 @@ export default function PMExecutive() {
     queryFn: () => get('/pm/executive-overview'),
     retry: false,
   })
+
+  const TABS = [
+    { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { key: 'portfolios', label: 'Portfolios', icon: FolderOpen },
+    { key: 'workload', label: 'Workload', icon: Users },
+    { key: 'automation', label: 'Automation', icon: Zap },
+  ]
 
   return (
     <div>
@@ -248,18 +487,19 @@ export default function PMExecutive() {
       </div>
 
       <div className="tab-bar" style={{ marginBottom: 20 }}>
-        <button className={`tab-item${tab === 'overview' ? ' active' : ''}`} onClick={() => setTab('overview')}>
-          <LayoutDashboard size={14} style={{ display: 'inline', marginRight: 6 }} />Overview
-        </button>
-        <button className={`tab-item${tab === 'portfolios' ? ' active' : ''}`} onClick={() => setTab('portfolios')}>
-          <FolderOpen size={14} style={{ display: 'inline', marginRight: 6 }} />Portfolios
-        </button>
+        {TABS.map(({ key, label, icon: Icon }) => (
+          <button key={key} className={`tab-item${tab === key ? ' active' : ''}`} onClick={() => setTab(key)}>
+            <Icon size={14} style={{ display: 'inline', marginRight: 6 }} />{label}
+          </button>
+        ))}
       </div>
 
       {tab === 'overview' && (
         lo ? <Spinner /> : <OverviewTab data={overviewData} />
       )}
       {tab === 'portfolios' && <PortfoliosTab />}
+      {tab === 'workload' && <WorkloadTab />}
+      {tab === 'automation' && <AutomationTab />}
     </div>
   )
 }

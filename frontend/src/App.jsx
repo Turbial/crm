@@ -16,12 +16,17 @@ import Companies from './pages/crm/Companies'
 import CompanyDetail from './pages/crm/CompanyDetail'
 import Deals from './pages/crm/Deals'
 import DealDetail from './pages/crm/DealDetail'
+import Opportunities from './pages/crm/Opportunities'
+import Tasks from './pages/crm/Tasks'
+import Communications from './pages/crm/Communications'
+import Notes from './pages/crm/Notes'
 
 // Sales
 import Appointments from './pages/sales/Appointments'
 import Products from './pages/sales/Products'
 import Quotes from './pages/sales/Quotes'
 import CallLogs from './pages/sales/CallLogs'
+import Reviews from './pages/sales/Reviews'
 
 // Marketing
 import Campaigns from './pages/marketing/Campaigns'
@@ -44,14 +49,20 @@ import DailyBrief from './pages/DailyBrief'
 import Duplicates from './pages/Duplicates'
 import ActivityFeed from './pages/ActivityFeed'
 import Notifications from './pages/Notifications'
+import Workflows from './pages/Workflows'
+import InboxThreads from './pages/InboxThreads'
 
 // Analytics & Admin
 import Analytics from './pages/Analytics'
+import Intelligence from './pages/Intelligence'
 import Webhooks from './pages/Webhooks'
 import Integrations from './pages/Integrations'
 import Billing from './pages/Billing'
 import AuditLog from './pages/AuditLog'
 import Settings from './pages/Settings'
+import CustomerPortal from './pages/CustomerPortal'
+import FileManager from './pages/FileManager'
+import AgentMemory from './pages/AgentMemory'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -61,13 +72,17 @@ const TITLES = {
   '/dashboard': 'Dashboard',
   '/crm/leads': 'Leads', '/crm/contacts': 'Contacts', '/crm/companies': 'Companies', '/crm/deals': 'Deals',
   '/crm/leads/': 'Lead', '/crm/contacts/': 'Contact', '/crm/companies/': 'Company', '/crm/deals/': 'Deal',
+  '/crm/opportunities': 'Opportunities', '/crm/tasks': 'Tasks',
+  '/crm/communications': 'Communications', '/crm/notes': 'Notes',
   '/sales/appointments': 'Appointments', '/sales/products': 'Products & Services',
-  '/sales/quotes': 'Quotes', '/sales/calls': 'Call Logs',
+  '/sales/quotes': 'Quotes', '/sales/calls': 'Call Logs', '/sales/reviews': 'Reviews',
   '/marketing/campaigns': 'Campaigns', '/marketing/sequences': 'Sequences',
   '/marketing/email-templates': 'Email Templates', '/marketing/scheduled': 'Scheduled Messages',
   '/pm/projects': 'Projects', '/pm/executive': 'PM Executive',
   '/pm/projects/': 'Project Board',
   '/messenger': 'Messenger',
+  '/inbox': 'Inbox Threads',
+  '/workflows': 'Workflows',
   '/actions': 'Action Runs',
   '/approvals': 'Approvals',
   '/supervisor': 'Supervisor',
@@ -76,6 +91,10 @@ const TITLES = {
   '/activity': 'Activity Feed',
   '/notifications': 'Notifications',
   '/analytics': 'Analytics',
+  '/intelligence': 'Intelligence',
+  '/portal': 'Customer Portal',
+  '/files': 'File Manager',
+  '/agent-memory': 'Agent Memory',
   '/webhooks': 'Webhooks',
   '/integrations': 'Integrations',
   '/billing': 'Billing',
@@ -109,12 +128,17 @@ function AppRoutes() {
         <Route path="/crm/companies/:id" element={<CompanyDetail />} />
         <Route path="/crm/deals" element={<Deals />} />
         <Route path="/crm/deals/:id" element={<DealDetail />} />
+        <Route path="/crm/opportunities" element={<Opportunities />} />
+        <Route path="/crm/tasks" element={<Tasks />} />
+        <Route path="/crm/communications" element={<Communications />} />
+        <Route path="/crm/notes" element={<Notes />} />
 
         {/* Sales */}
         <Route path="/sales/appointments" element={<Appointments />} />
         <Route path="/sales/products" element={<Products />} />
         <Route path="/sales/quotes" element={<Quotes />} />
         <Route path="/sales/calls" element={<CallLogs />} />
+        <Route path="/sales/reviews" element={<Reviews />} />
 
         {/* Marketing */}
         <Route path="/marketing/campaigns" element={<Campaigns />} />
@@ -130,6 +154,8 @@ function AppRoutes() {
         {/* Operations */}
         <Route path="/messenger" element={<MessengerInbox />} />
         <Route path="/messenger/:id" element={<ConversationView />} />
+        <Route path="/inbox" element={<InboxThreads />} />
+        <Route path="/workflows" element={<Workflows />} />
         <Route path="/actions" element={<ActionRuns />} />
         <Route path="/approvals" element={<Approvals />} />
         <Route path="/supervisor" element={<Supervisor />} />
@@ -140,6 +166,10 @@ function AppRoutes() {
 
         {/* Analytics & Admin */}
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/intelligence" element={<Intelligence />} />
+        <Route path="/portal" element={<CustomerPortal />} />
+        <Route path="/files" element={<FileManager />} />
+        <Route path="/agent-memory" element={<AgentMemory />} />
         <Route path="/webhooks" element={<Webhooks />} />
         <Route path="/integrations" element={<Integrations />} />
         <Route path="/billing" element={<Billing />} />
