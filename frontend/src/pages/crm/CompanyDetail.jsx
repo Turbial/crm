@@ -5,6 +5,7 @@ import { ArrowLeft, Edit2, Save, X } from 'lucide-react'
 import { get, patch, del } from '../../api'
 import Spinner from '../../components/Spinner'
 import Badge from '../../components/Badge'
+import Timeline from '../../components/Timeline'
 
 const FIELDS = [
   ['name', 'Company Name', 'text'],
@@ -36,6 +37,13 @@ export default function CompanyDetail() {
   const { data: contacts = [] } = useQuery({
     queryKey: ['company-contacts', id],
     queryFn: () => get(`/companies/${id}/contacts`),
+    enabled: !!company,
+    retry: false,
+  })
+
+  const { data: timeline = [] } = useQuery({
+    queryKey: ['timeline', 'company', id],
+    queryFn: () => get(`/companies/${id}/timeline`),
     enabled: !!company,
     retry: false,
   })
@@ -152,6 +160,11 @@ export default function CompanyDetail() {
               ))}
             </div>
           )}
+
+          <div className="card">
+            <h3 className="font-semibold" style={{ fontSize: 14, marginBottom: 16 }}>Activity Timeline</h3>
+            <Timeline events={timeline} />
+          </div>
         </div>
       </div>
     </div>

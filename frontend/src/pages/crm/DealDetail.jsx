@@ -33,6 +33,27 @@ export default function DealDetail() {
     retry: false,
   })
 
+  const { data: linkedLead } = useQuery({
+    queryKey: ['lead', deal?.lead_id],
+    queryFn: () => get(`/leads/${deal.lead_id}`),
+    enabled: !!deal?.lead_id,
+    retry: false,
+  })
+
+  const { data: linkedContact } = useQuery({
+    queryKey: ['contact', deal?.contact_id],
+    queryFn: () => get(`/contacts/${deal.contact_id}`),
+    enabled: !!deal?.contact_id,
+    retry: false,
+  })
+
+  const { data: linkedCompany } = useQuery({
+    queryKey: ['company', deal?.company_id],
+    queryFn: () => get(`/companies/${deal.company_id}`),
+    enabled: !!deal?.company_id,
+    retry: false,
+  })
+
   const update = useMutation({
     mutationFn: body => patch(`/deals/${id}`, body),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['deal', id] }); setEditing(false) },
@@ -53,7 +74,7 @@ export default function DealDetail() {
       currency: deal.currency || 'USD',
       stage: deal.stage || 'lead',
       probability: deal.probability,
-      close_date: deal.close_date ? deal.close_date.slice(0, 10) : '',
+      expected_close_date: deal.expected_close_date ? deal.expected_close_date.slice(0, 10) : '',
       notes: deal.notes || '',
     })
     setEditing(true)
@@ -64,7 +85,7 @@ export default function DealDetail() {
       <div className="flex items-center gap-3 mb-4">
         <button className="btn btn-ghost btn-icon" onClick={() => navigate(-1)}><ArrowLeft size={16} /></button>
         <h1 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>{deal.title || deal.name}</h1>
-        <Badge label={deal.stage || 'lead'} />
+        {deal.stage && <Badge label={deal.stage} />}
         {!editing && (
           <button className="btn btn-secondary btn-sm flex gap-1 items-center" onClick={startEdit}>
             <Edit2 size={13} /> Edit
@@ -98,7 +119,7 @@ export default function DealDetail() {
               </div>
               <div className="form-group">
                 <label className="form-label">Expected Close Date</label>
-                <input className="form-input" type="date" value={form.close_date || ''} onChange={e => setForm(f => ({ ...f, close_date: e.target.value }))} />
+                <input className="form-input" type="date" value={form.expected_close_date || ''} onChange={e => setForm(f => ({ ...f, expected_close_date: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label className="form-label">Notes</label>
@@ -116,10 +137,10 @@ export default function DealDetail() {
             <div>
               {[
                 ['Value', fmt(deal.value)],
-                ['Currency', deal.currency || 'USD'],
+                ['Currency', deal.currency ? deal.currency.toUpperCase() : 'USD'],
                 ['Stage', deal.stage],
                 ['Probability', deal.probability != null ? `${deal.probability}%` : '—'],
-                ['Close Date', deal.close_date ? new Date(deal.close_date).toLocaleDateString() : '—'],
+                ['Close Date', deal.expected_close_date ? new Date(deal.expected_close_date).toLocaleDateString() : '—'],
                 ['Created', new Date(deal.created_at).toLocaleDateString()],
               ].map(([label, val]) => (
                 <div key={label} className="flex justify-between" style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -127,30 +148,32 @@ export default function DealDetail() {
                   <span className="font-medium">{val || '—'}</span>
                 </div>
               ))}
-              {deal.lead_id && (
+
+              {linkedLead && (
                 <div className="flex justify-between" style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Lead</span>
                   <Link to={`/crm/leads/${deal.lead_id}`} style={{ color: 'var(--accent)', fontSize: 13 }}>
-                    {deal.lead_id.slice(0, 8)}…
+                    {linkedLead.name}
                   </Link>
                 </div>
               )}
-              {deal.contact_id && (
+              {linkedContact && (
                 <div className="flex justify-between" style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Contact</span>
                   <Link to={`/crm/contacts/${deal.contact_id}`} style={{ color: 'var(--accent)', fontSize: 13 }}>
-                    {deal.contact_id.slice(0, 8)}…
+                    {linkedContact.name}
                   </Link>
                 </div>
               )}
-              {deal.company_id && (
+              {linkedCompany && (
                 <div className="flex justify-between" style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Company</span>
                   <Link to={`/crm/companies/${deal.company_id}`} style={{ color: 'var(--accent)', fontSize: 13 }}>
-                    {deal.company_id.slice(0, 8)}…
+                    {linkedCompany.name}
                   </Link>
                 </div>
               )}
+
               {deal.notes && (
                 <div style={{ marginTop: 12, fontSize: 13 }}>
                   <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>Notes</div>

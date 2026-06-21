@@ -3,11 +3,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from typing import Optional
+from pydantic import BaseModel
 
 from app.database import get_db
 from app.deps import get_current_user, require_manager
 from app.models import User, ApprovalRequest, ActionApprovalStatus
 from app.schemas import ApprovalRequestOut
+
+
+class ApprovalDecisionBody(BaseModel):
+    note: Optional[str] = None
 
 router = APIRouter(prefix="/approvals", tags=["Approvals"])
 
@@ -62,13 +68,13 @@ def get_approval(
 @router.post("/{approval_id}/approve", response_model=ApprovalRequestOut)
 def approve(
     approval_id: str,
-    note: str | None = None,
+    body: ApprovalDecisionBody = None,
     db: Session = Depends(get_db),
     user: User = Depends(require_manager),
 ):
     from app.services.action_registry import resolve_approval
     approval = resolve_approval(db, approval_id, user.organization_id,
-                                decision="approved", note=note, user_id=user.id)
+                                decision="approved", note=body.note if body else None, user_id=user.id)
     if not approval:
         raise HTTPException(status_code=404, detail="Approval not found")
     return approval
@@ -77,13 +83,13 @@ def approve(
 @router.post("/{approval_id}/reject", response_model=ApprovalRequestOut)
 def reject(
     approval_id: str,
-    note: str | None = None,
+    body: ApprovalDecisionBody = None,
     db: Session = Depends(get_db),
     user: User = Depends(require_manager),
 ):
     from app.services.action_registry import resolve_approval
     approval = resolve_approval(db, approval_id, user.organization_id,
-                                decision="rejected", note=note, user_id=user.id)
+                                decision="rejected", note=body.note if body else None, user_id=user.id)
     if not approval:
         raise HTTPException(status_code=404, detail="Approval not found")
     return approval

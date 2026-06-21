@@ -29,9 +29,11 @@ export default function Deals() {
 
   const create = useMutation({
     mutationFn: body => post('/deals', {
-      ...body,
+      title: body.title,
       value: parseFloat(body.value) || 0,
-      close_date: body.close_date || undefined,
+      currency: body.currency,
+      stage: body.stage,
+      expected_close_date: body.close_date || undefined,
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['deals'] }); setShowCreate(false); setForm({ title: '', value: '', currency: 'USD', stage: 'lead', close_date: '' }) },
   })
@@ -75,7 +77,7 @@ export default function Deals() {
                       <td className="td-title">{d.title || d.name}</td>
                       <td><Badge label={d.stage || 'lead'} /></td>
                       <td><span className="font-medium" style={{ color: 'var(--success)' }}>{fmt(d.value)}</span></td>
-                      <td className="td-muted">{d.close_date ? new Date(d.close_date).toLocaleDateString() : '—'}</td>
+                      <td className="td-muted">{d.expected_close_date ? new Date(d.expected_close_date).toLocaleDateString() : '—'}</td>
                       <td className="td-muted">{new Date(d.created_at).toLocaleDateString()}</td>
                     </tr>
                   ))}

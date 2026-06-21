@@ -26,12 +26,14 @@ def create_deal(
         company_id=body.company_id,
         pipeline_id=body.pipeline_id,
         stage_id=body.stage_id,
+        stage=body.stage,
         value=body.value,
         probability=body.probability,
         currency=body.currency,
         expected_close_date=body.expected_close_date,
         owner_user_id=body.owner_user_id or user.id,
         source=body.source,
+        notes=body.notes,
         tags=body.tags,
     )
     db.add(deal)

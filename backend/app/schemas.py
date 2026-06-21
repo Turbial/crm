@@ -1145,12 +1145,14 @@ class DealCreate(BaseModel):
     company_id: Optional[str] = None
     pipeline_id: Optional[str] = None
     stage_id: Optional[str] = None
+    stage: Optional[str] = None
     value: float = 0
     probability: int = 25
     currency: str = "usd"
     expected_close_date: Optional[datetime] = None
     owner_user_id: Optional[str] = None
     source: Optional[str] = None
+    notes: Optional[str] = None
     tags: list[Any] = []
 
 class DealUpdate(BaseModel):
@@ -1160,6 +1162,7 @@ class DealUpdate(BaseModel):
     company_id: Optional[str] = None
     pipeline_id: Optional[str] = None
     stage_id: Optional[str] = None
+    stage: Optional[str] = None
     value: Optional[float] = None
     probability: Optional[int] = None
     currency: Optional[str] = None
@@ -1167,6 +1170,7 @@ class DealUpdate(BaseModel):
     owner_user_id: Optional[str] = None
     source: Optional[str] = None
     lost_reason: Optional[str] = None
+    notes: Optional[str] = None
     tags: Optional[list[Any]] = None
 
 class DealOut(DealCreate):
