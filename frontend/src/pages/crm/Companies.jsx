@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Building2 } from 'lucide-react'
@@ -12,11 +12,17 @@ export default function Companies() {
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [form, setForm] = useState({ name: '', domain: '', industry: '', size: '', website: '' })
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
   const { data: companies = [], isLoading } = useQuery({
-    queryKey: ['companies', search],
-    queryFn: () => get('/companies', { ...(search ? { search } : {}), limit: 200 }),
+    queryKey: ['companies', debouncedSearch],
+    queryFn: () => get('/companies', { ...(debouncedSearch ? { search: debouncedSearch } : {}), limit: 200 }),
   })
 
   const create = useMutation({

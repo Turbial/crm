@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Users } from 'lucide-react'
@@ -12,11 +12,17 @@ export default function Contacts() {
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [form, setForm] = useState({ name: '', email: '', phone: '', title: '' })
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ['contacts', search],
-    queryFn: () => get('/contacts', { ...(search ? { q: search } : {}), limit: 200 }),
+    queryKey: ['contacts', debouncedSearch],
+    queryFn: () => get('/contacts', { ...(debouncedSearch ? { q: debouncedSearch } : {}), limit: 200 }),
   })
 
   const create = useMutation({

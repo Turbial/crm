@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Plus, Search, Users } from 'lucide-react'
@@ -14,14 +14,20 @@ export default function Leads() {
   const qc = useQueryClient()
   const [filter, setFilter] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', company: '', email: '', phone: '', status: 'new', source: 'manual' })
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ['leads', filter, search],
+    queryKey: ['leads', filter, debouncedSearch],
     queryFn: () => get('/leads', {
       ...(filter ? { status: filter } : {}),
-      ...(search ? { q: search } : {}),
+      ...(debouncedSearch ? { q: debouncedSearch } : {}),
       limit: 200,
     }),
   })

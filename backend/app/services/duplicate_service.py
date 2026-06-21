@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.models import DuplicateCandidate, DuplicateStatus, Lead, Contact, Company
+from app.models import DuplicateCandidate, DuplicateStatus, Lead, Contact, Company, Deal, Conversation
 
 AUTO_MERGE_THRESHOLD = 0.95
 SUGGEST_THRESHOLD = 0.75
@@ -263,6 +263,10 @@ def merge_contacts(
         cand.resolved_by_user_id = user_id
         cand.resolved_at = datetime.utcnow()
 
+    # Re-link child records so FK constraints don't block the delete
+    db.query(Deal).filter(Deal.contact_id == merge_id, Deal.organization_id == org_id).update({"contact_id": keep_id})
+    db.query(Conversation).filter(Conversation.contact_id == merge_id, Conversation.organization_id == org_id).update({"contact_id": keep_id})
+
     db.delete(merge_obj)
     db.commit()
     db.refresh(keep)
@@ -297,6 +301,10 @@ def merge_companies(
         cand.merged_into_id = keep_id
         cand.resolved_by_user_id = user_id
         cand.resolved_at = datetime.utcnow()
+
+    # Re-link child records so FK constraints don't block the delete
+    db.query(Deal).filter(Deal.company_id == merge_id, Deal.organization_id == org_id).update({"company_id": keep_id})
+    db.query(Conversation).filter(Conversation.company_id == merge_id, Conversation.organization_id == org_id).update({"company_id": keep_id})
 
     db.delete(merge_obj)
     db.commit()

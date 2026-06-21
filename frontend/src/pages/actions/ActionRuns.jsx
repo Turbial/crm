@@ -34,7 +34,7 @@ function RunDetail({ runId, onClose }) {
   const { data: run, isLoading } = useQuery({
     queryKey: ['action-run', runId],
     queryFn: () => get(`/action-runs/${runId}`),
-    refetchInterval: run?.status && CANCELLABLE.has(run.status) ? 3000 : false,
+    refetchInterval: (query) => CANCELLABLE.has(query.state.data?.status) ? 3000 : false,
   })
 
   const cancel = useMutation({

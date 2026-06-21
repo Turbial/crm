@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Briefcase, Search } from 'lucide-react'
@@ -20,11 +20,17 @@ export default function Deals() {
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [form, setForm] = useState({ title: '', value: '', currency: 'USD', stage: 'lead', close_date: '' })
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
   const { data: deals = [], isLoading } = useQuery({
-    queryKey: ['deals', search],
-    queryFn: () => get('/deals', { ...(search ? { q: search } : {}), limit: 200 }),
+    queryKey: ['deals', debouncedSearch],
+    queryFn: () => get('/deals', { ...(debouncedSearch ? { q: debouncedSearch } : {}), limit: 200 }),
   })
 
   const create = useMutation({
