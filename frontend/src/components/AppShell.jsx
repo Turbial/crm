@@ -75,6 +75,7 @@ const NAV = [
   {
     section: 'Analytics',
     items: [
+      { label: 'Pipeline', to: '/pipeline', icon: TrendingUp },
       { label: 'Analytics', to: '/analytics', icon: BarChart2 },
       { label: 'Intelligence', to: '/intelligence', icon: Brain },
     ],

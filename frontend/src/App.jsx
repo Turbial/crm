@@ -27,6 +27,7 @@ import Products from './pages/sales/Products'
 import Quotes from './pages/sales/Quotes'
 import CallLogs from './pages/sales/CallLogs'
 import Reviews from './pages/sales/Reviews'
+import QuoteDetail from './pages/sales/QuoteDetail'
 
 // Marketing
 import Campaigns from './pages/marketing/Campaigns'
@@ -63,6 +64,7 @@ import Settings from './pages/Settings'
 import CustomerPortal from './pages/CustomerPortal'
 import FileManager from './pages/FileManager'
 import AgentMemory from './pages/AgentMemory'
+import Pipeline from './pages/Pipeline'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -75,7 +77,8 @@ const TITLES = {
   '/crm/opportunities': 'Opportunities', '/crm/tasks': 'Tasks',
   '/crm/communications': 'Communications', '/crm/notes': 'Notes',
   '/sales/appointments': 'Appointments', '/sales/products': 'Products & Services',
-  '/sales/quotes': 'Quotes', '/sales/calls': 'Call Logs', '/sales/reviews': 'Reviews',
+  '/sales/quotes': 'Quotes', '/sales/quotes/': 'Quote', '/sales/calls': 'Call Logs', '/sales/reviews': 'Reviews',
+  '/pipeline': 'Pipeline',
   '/marketing/campaigns': 'Campaigns', '/marketing/sequences': 'Sequences',
   '/marketing/email-templates': 'Email Templates', '/marketing/scheduled': 'Scheduled Messages',
   '/pm/projects': 'Projects', '/pm/executive': 'PM Executive',
@@ -137,6 +140,7 @@ function AppRoutes() {
         <Route path="/sales/appointments" element={<Appointments />} />
         <Route path="/sales/products" element={<Products />} />
         <Route path="/sales/quotes" element={<Quotes />} />
+        <Route path="/sales/quotes/:id" element={<QuoteDetail />} />
         <Route path="/sales/calls" element={<CallLogs />} />
         <Route path="/sales/reviews" element={<Reviews />} />
 
@@ -165,6 +169,7 @@ function AppRoutes() {
         <Route path="/notifications" element={<Notifications />} />
 
         {/* Analytics & Admin */}
+        <Route path="/pipeline" element={<Pipeline />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/intelligence" element={<Intelligence />} />
         <Route path="/portal" element={<CustomerPortal />} />

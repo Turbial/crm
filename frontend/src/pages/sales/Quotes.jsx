@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { get, post, patch, del } from '../../api'
 import Spinner from '../../components/Spinner'
 import Badge from '../../components/Badge'
@@ -44,6 +45,7 @@ function toDateInput(isoStr) {
 }
 
 export default function Quotes() {
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const [statusFilter, setStatusFilter] = useState('')
   const [modalMode, setModalMode] = useState(null)
@@ -174,7 +176,7 @@ export default function Quotes() {
               {filtered.map((quote) => (
                 <tr
                   key={quote.id}
-                  onClick={() => openEdit(quote)}
+                  onClick={() => navigate(`/sales/quotes/${quote.id}`)}
                   style={{ cursor: 'pointer' }}
                 >
                   <td className="font-medium">{quote.title}</td>
