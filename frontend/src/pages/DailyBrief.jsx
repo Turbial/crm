@@ -42,7 +42,7 @@ export default function DailyBrief() {
       )}
 
       {!brief && !generate.isPending
-        ? <EmptyState icon={FileText} title="No brief yet" description='Click "Generate Now" to create today\'s brief.' />
+        ? <EmptyState icon={FileText} title="No brief yet" description={'Click "Generate Now" to create today\'s brief.'} />
         : brief && (
           <div>
             <div className="flex gap-3 items-center mb-4">

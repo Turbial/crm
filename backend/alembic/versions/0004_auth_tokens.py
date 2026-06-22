@@ -34,7 +34,7 @@ def upgrade():
 
     # All users created before this migration were added via trusted admin invite —
     # mark them as verified so they aren't locked out.
-    op.execute("UPDATE users SET email_verified = 1 WHERE email_verified = 0")
+    op.execute("UPDATE users SET email_verified = true WHERE email_verified = false")
 
 
 def downgrade():
