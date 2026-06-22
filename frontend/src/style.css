@@ -236,6 +236,29 @@ select.form-input { cursor: pointer; }
 .ai-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 380px; background: var(--surface); border-left: 1px solid var(--border); box-shadow: -4px 0 24px rgba(0,0,0,.1); z-index: 200; display: flex; flex-direction: column; }
 .ai-panel-overlay { position: fixed; inset: 0; z-index: 199; background: rgba(0,0,0,.12); }
 
+/* ── Skeleton loader ───────────────────────────────────────────────── */
+@keyframes shimmer { from { background-position: -400px 0 } to { background-position: 400px 0 } }
+.skeleton {
+  background: linear-gradient(90deg, var(--border) 25%, var(--border-subtle) 50%, var(--border) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 4px;
+}
+.skeleton-row { height: 44px; margin-bottom: 1px; }
+.skeleton-text { height: 12px; margin-bottom: 8px; border-radius: 6px; }
+
+/* ── Drag-and-drop ─────────────────────────────────────────────────── */
+.kanban-card[draggable] { user-select: none; }
+
+/* ── Print (quote print view) ──────────────────────────────────────── */
+@media print {
+  .sidebar, .topbar, .no-print { display: none !important; }
+  .main { display: block !important; overflow: visible !important; }
+  .content { overflow: visible !important; padding: 0 !important; }
+  .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+  body { background: #fff !important; }
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .sidebar { width: 64px; }

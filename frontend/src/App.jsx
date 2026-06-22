@@ -28,6 +28,7 @@ import Quotes from './pages/sales/Quotes'
 import CallLogs from './pages/sales/CallLogs'
 import Reviews from './pages/sales/Reviews'
 import QuoteDetail from './pages/sales/QuoteDetail'
+import QuotePrint from './pages/sales/QuotePrint'
 
 // Marketing
 import Campaigns from './pages/marketing/Campaigns'
@@ -77,7 +78,7 @@ const TITLES = {
   '/crm/opportunities': 'Opportunities', '/crm/tasks': 'Tasks',
   '/crm/communications': 'Communications', '/crm/notes': 'Notes',
   '/sales/appointments': 'Appointments', '/sales/products': 'Products & Services',
-  '/sales/quotes': 'Quotes', '/sales/quotes/': 'Quote', '/sales/calls': 'Call Logs', '/sales/reviews': 'Reviews',
+  '/sales/quotes': 'Quotes', '/sales/quotes/': 'Quote', '/sales/quotes/print': 'Quote Preview', '/sales/calls': 'Call Logs', '/sales/reviews': 'Reviews',
   '/pipeline': 'Pipeline',
   '/marketing/campaigns': 'Campaigns', '/marketing/sequences': 'Sequences',
   '/marketing/email-templates': 'Email Templates', '/marketing/scheduled': 'Scheduled Messages',
@@ -141,6 +142,7 @@ function AppRoutes() {
         <Route path="/sales/products" element={<Products />} />
         <Route path="/sales/quotes" element={<Quotes />} />
         <Route path="/sales/quotes/:id" element={<QuoteDetail />} />
+        <Route path="/sales/quotes/:id/print" element={<QuotePrint />} />
         <Route path="/sales/calls" element={<CallLogs />} />
         <Route path="/sales/reviews" element={<Reviews />} />
 

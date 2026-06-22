@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Plus, Trash2, Save, Send, CheckCircle, XCircle, CreditCard, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save, Send, CheckCircle, XCircle, CreditCard, AlertTriangle, Printer } from 'lucide-react'
 import { get, post, patch, del } from '../../api'
 import {
   Spinner, Badge, Modal, SectionCard, FormField, ErrorMessage,
@@ -339,6 +339,15 @@ export default function QuoteDetail() {
           />
         )}
         <Badge label={quote.status} color={STATUS_COLORS[quote.status] || 'gray'} />
+        <a
+          href={`/sales/quotes/${id}/print`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-secondary btn-sm no-print"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <Printer size={14} /> Print
+        </a>
       </div>
 
       {/* Sub-header: lead + date */}
