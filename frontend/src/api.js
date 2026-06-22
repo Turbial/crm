@@ -1,5 +1,8 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+// Flag to prevent redirect loops on auth-required pages that mount AuthProvider
+let _isLoggingOut = false
+
 export function getToken() { return localStorage.getItem('token') }
 export function setToken(token) { localStorage.setItem('token', token) }
 export function clearToken() { localStorage.removeItem('token') }
@@ -45,7 +48,14 @@ export async function api(path, options = {}) {
     }
     clearToken()
     clearRefreshToken()
-    window.location.href = '/login'
+    // Only hard-redirect if we're not already on a public page
+    if (!window.location.pathname.startsWith('/login') &&
+        !window.location.pathname.startsWith('/signup') &&
+        !window.location.pathname.startsWith('/forgot-password') &&
+        !window.location.pathname.startsWith('/reset-password') &&
+        !window.location.pathname.startsWith('/verify-email')) {
+      window.location.href = '/login'
+    }
     return
   }
 
