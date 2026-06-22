@@ -5,6 +5,10 @@ import AppShell from './components/AppShell'
 import Spinner from './components/Spinner'
 
 import Login from './pages/Login'
+import Signup from './pages/Signup'
+import VerifyEmail from './pages/VerifyEmail'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/Dashboard'
 
 // CRM
@@ -104,6 +108,10 @@ const TITLES = {
   '/billing': 'Billing',
   '/audit': 'Audit Log',
   '/settings': 'Settings',
+  '/signup': 'Sign Up',
+  '/verify-email': 'Verify Email',
+  '/forgot-password': 'Forgot Password',
+  '/reset-password': 'Reset Password',
 }
 
 function ProtectedRoute() {
@@ -119,6 +127,10 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user && user !== undefined ? <Navigate to="/dashboard" /> : <Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />

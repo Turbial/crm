@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { login } from '../api'
 import { useAuth } from '../contexts/AuthContext'
 import { get } from '../api'
@@ -40,13 +40,20 @@ export default function Login() {
             <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="form-label">Password</label>
+              <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--accent)' }}>Forgot password?</Link>
+            </div>
             <input className="form-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
           {error && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</p>}
           <button className="btn btn-primary" type="submit" disabled={loading} style={{ marginTop: 4 }}>
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
+          <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
+            Don't have an account?{' '}
+            <Link to="/signup" style={{ color: 'var(--accent)', fontWeight: 500 }}>Sign up free</Link>
+          </p>
         </form>
       </div>
     </div>

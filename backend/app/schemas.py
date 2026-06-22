@@ -15,6 +15,22 @@ class LoginIn(BaseModel):
 class RefreshIn(BaseModel):
     refresh_token: str
 
+class RegisterIn(BaseModel):
+    org_name: str
+    name: str
+    email: str
+    password: str
+
+class ForgotPasswordIn(BaseModel):
+    email: str
+
+class ResetPasswordIn(BaseModel):
+    token: str
+    password: str
+
+class MessageOut(BaseModel):
+    message: str
+
 class OrganizationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str

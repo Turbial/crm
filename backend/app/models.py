@@ -85,6 +85,10 @@ class User(Base, TimestampMixin):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.owner)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_verification_token: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    password_reset_token: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    password_reset_expires: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     organization: Mapped[Organization] = relationship(back_populates="users")
 
 class Lead(Base, TimestampMixin):
