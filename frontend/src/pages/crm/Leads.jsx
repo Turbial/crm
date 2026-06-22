@@ -8,7 +8,7 @@ import EmptyState from '../../components/EmptyState'
 import Modal from '../../components/Modal'
 import Pagination from '../../components/Pagination'
 
-const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']
+const STATUSES = ['new', 'contacted', 'qualified', 'appointment', 'proposal', 'won', 'lost']
 const LIMIT = 50
 
 const SORT_COLS = [

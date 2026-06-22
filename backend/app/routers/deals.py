@@ -2,12 +2,23 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_manager
-from app.models import User, Deal, PipelineStage
+from app.models import User, Deal, Pipeline, PipelineStage, PipelineStatus
 from app.schemas import DealCreate, DealUpdate, DealOut
+
+
+class StageCreateBody(BaseModel):
+    name: str
+    pipeline_id: str | None = None
+    position: int = 1
+    probability_default: int = 25
+    color: str | None = None
+    is_won_stage: bool = False
+    is_lost_stage: bool = False
 
 router = APIRouter(prefix="/deals", tags=["Deals"])
 
@@ -68,13 +79,27 @@ def list_deals(
     return query.order_by(Deal.created_at.desc()).limit(limit).all()
 
 
+_DEFAULT_STAGES = ["Lead", "Qualified", "Proposal", "Negotiation", "Won", "Lost"]
+
+
+def _deal_card(deal: Deal) -> dict:
+    return {
+        "id": deal.id, "title": deal.title, "value": deal.value,
+        "probability": deal.probability, "owner_user_id": deal.owner_user_id,
+    }
+
+
 @router.get("/board")
 def deals_board(
     pipeline_id: str | None = Query(default=None),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Return deals grouped by pipeline stage — for Kanban rendering."""
+    """Return deals grouped by pipeline stage — for Kanban rendering.
+
+    Falls back to grouping by the deal.stage string field when no formal
+    PipelineStage rows exist (common on fresh installs).
+    """
     stages = db.query(PipelineStage).filter(
         PipelineStage.organization_id == user.organization_id,
         *([PipelineStage.pipeline_id == pipeline_id] if pipeline_id else []),
@@ -85,24 +110,49 @@ def deals_board(
         q = q.filter(Deal.pipeline_id == pipeline_id)
     all_deals = q.all()
 
-    stage_map: dict[str | None, list] = {s.id: [] for s in stages}
-    stage_map[None] = []
-    for deal in all_deals:
-        stage_map.setdefault(deal.stage_id, []).append({
-            "id": deal.id, "title": deal.title, "value": deal.value,
-            "probability": deal.probability, "owner_user_id": deal.owner_user_id,
-        })
+    if stages:
+        # Formal pipeline: group by stage_id, match by stage string as fallback
+        stage_by_name = {s.name.lower(): s for s in stages}
+        stage_map: dict[str | None, list] = {s.id: [] for s in stages}
+        stage_map[None] = []
+        for deal in all_deals:
+            key = deal.stage_id
+            if key is None and deal.stage:
+                matched = stage_by_name.get(deal.stage.lower())
+                key = matched.id if matched else None
+            stage_map.setdefault(key, []).append(_deal_card(deal))
 
-    return {
-        "stages": [
-            {"id": s.id, "name": s.name, "position": s.position,
-             "color": s.color, "probability_default": s.probability_default,
-             "is_won_stage": s.is_won_stage, "is_lost_stage": s.is_lost_stage,
-             "deals": stage_map.get(s.id, [])}
-            for s in stages
-        ],
-        "unassigned": stage_map.get(None, []),
-    }
+        return {
+            "stages": [
+                {"id": s.id, "name": s.name, "position": s.position,
+                 "color": s.color, "probability_default": s.probability_default,
+                 "is_won_stage": s.is_won_stage, "is_lost_stage": s.is_lost_stage,
+                 "deals": stage_map.get(s.id, [])}
+                for s in stages
+            ],
+            "unassigned": stage_map.get(None, []),
+        }
+    else:
+        # No formal stages: group by deal.stage string field
+        string_map: dict[str, list] = {}
+        for deal in all_deals:
+            key = (deal.stage or "lead").lower()
+            string_map.setdefault(key, []).append(_deal_card(deal))
+
+        ordered = sorted(
+            string_map.keys(),
+            key=lambda s: _DEFAULT_STAGES.index(s.capitalize()) if s.capitalize() in _DEFAULT_STAGES else 99,
+        )
+        return {
+            "stages": [
+                {"id": k, "name": k.capitalize(), "position": i,
+                 "color": None, "probability_default": 25,
+                 "is_won_stage": k == "won", "is_lost_stage": k == "lost",
+                 "deals": string_map[k]}
+                for i, k in enumerate(ordered)
+            ],
+            "unassigned": [],
+        }
 
 
 @router.get("/{deal_id}", response_model=DealOut)
@@ -205,27 +255,47 @@ def deal_timeline(
 
 # ─── Pipeline Stage management ─────────────────────────────────────────────────
 
+def _get_or_create_default_pipeline(db: Session, org_id: str) -> Pipeline:
+    pipeline = db.query(Pipeline).filter(
+        Pipeline.organization_id == org_id,
+        Pipeline.is_default == True,
+    ).first()
+    if not pipeline:
+        pipeline = Pipeline(
+            organization_id=org_id,
+            name="Default Pipeline",
+            status=PipelineStatus.active,
+            is_default=True,
+        )
+        db.add(pipeline)
+        db.flush()
+    return pipeline
+
+
 @router.post("/stages", response_model=dict)
 def create_stage(
-    pipeline_id: str,
-    name: str,
-    position: int = 1,
-    probability_default: int = 25,
-    color: str | None = None,
-    is_won_stage: bool = False,
-    is_lost_stage: bool = False,
+    body: StageCreateBody,
     db: Session = Depends(get_db),
     user: User = Depends(require_manager),
 ):
+    pipeline_id = body.pipeline_id
+    if not pipeline_id:
+        pipeline_id = _get_or_create_default_pipeline(db, user.organization_id).id
+
+    existing_count = db.query(PipelineStage).filter(
+        PipelineStage.organization_id == user.organization_id,
+        PipelineStage.pipeline_id == pipeline_id,
+    ).count()
+
     stage = PipelineStage(
         organization_id=user.organization_id,
         pipeline_id=pipeline_id,
-        name=name,
-        position=position,
-        probability_default=probability_default,
-        color=color,
-        is_won_stage=is_won_stage,
-        is_lost_stage=is_lost_stage,
+        name=body.name,
+        position=body.position if body.position != 1 else existing_count + 1,
+        probability_default=body.probability_default,
+        color=body.color,
+        is_won_stage=body.is_won_stage,
+        is_lost_stage=body.is_lost_stage,
     )
     db.add(stage)
     db.commit()

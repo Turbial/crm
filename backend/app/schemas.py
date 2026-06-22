@@ -292,6 +292,15 @@ class QuoteCreate(BaseModel):
     total: float = 0
     line_items: list[dict[str, Any]] = []
 
+class QuoteUpdate(BaseModel):
+    lead_id: Optional[str] = None
+    title: Optional[str] = None
+    status: Optional[QuoteStatus] = None
+    subtotal: Optional[float] = None
+    discount: Optional[float] = None
+    total: Optional[float] = None
+    line_items: Optional[list[dict[str, Any]]] = None
+
 class QuoteOut(QuoteCreate):
     model_config = ConfigDict(from_attributes=True)
     id: str

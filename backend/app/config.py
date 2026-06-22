@@ -101,11 +101,12 @@ class Settings(BaseSettings):
 
     @field_validator("secret_key")
     @classmethod
-    def validate_secret_key(cls, value: str):
-        # Fail fast in production if the default key is used.
-        # We cannot see `environment` here reliably, so the app startup also checks.
+    def validate_secret_key(cls, value: str) -> str:
         if not value or len(value) < 24:
-            return value
+            raise ValueError(
+                "SECRET_KEY must be at least 24 characters. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
         return value
 
 

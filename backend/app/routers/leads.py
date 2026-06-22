@@ -10,14 +10,14 @@ from app.services import events
 router = APIRouter(prefix="/leads", tags=["leads"])
 
 @router.get("", response_model=list[LeadOut])
-def list_leads(q: str | None = Query(default=None), status: str | None = None, limit: int = 100, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_leads(q: str | None = Query(default=None), status: str | None = None, limit: int = 100, offset: int = Query(default=0, ge=0), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     query = db.query(Lead).filter(Lead.organization_id == user.organization_id)
     if q:
         like = f"%{q}%"
         query = query.filter(or_(Lead.name.ilike(like), Lead.company.ilike(like), Lead.email.ilike(like), Lead.phone.ilike(like)))
     if status:
         query = query.filter(Lead.status == status)
-    return query.order_by(Lead.created_at.desc()).limit(limit).all()
+    return query.order_by(Lead.created_at.desc()).offset(offset).limit(limit).all()
 
 @router.post("", response_model=LeadOut)
 def create_lead(payload: LeadCreate, user: User = Depends(require_staff), db: Session = Depends(get_db)):

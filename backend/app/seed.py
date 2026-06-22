@@ -20,8 +20,8 @@ def seed():
     try:
         org = Organization(name="MightyMax Demo Roofing", industry="roofing", plan="agent", settings={"timezone":"America/Los_Angeles", "brand":"MightyMax"})
         db.add(org); db.flush()
-        user = User(organization_id=org.id, name="Marcus Owner", email="owner@mightymax.ai", password_hash=hash_password("mighty123"), role=UserRole.owner)
-        agent_user = User(organization_id=org.id, name="Mighty Sales Agent", email="sales-agent@mightymax.ai", password_hash=hash_password("mighty123"), role=UserRole.agent)
+        user = User(organization_id=org.id, name="Marcus Owner", email="owner@mightymax.ai", password_hash=hash_password("mighty123"), role=UserRole.owner, email_verified=True)
+        agent_user = User(organization_id=org.id, name="Mighty Sales Agent", email="sales-agent@mightymax.ai", password_hash=hash_password("mighty123"), role=UserRole.agent, email_verified=True)
         db.add_all([user, agent_user]); db.flush()
 
         leads = [

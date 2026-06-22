@@ -40,7 +40,7 @@ _RESET_TTL_HOURS = 1
 @router.post("/login", response_model=TokenOut)
 @limiter.limit("10/minute")
 def login(request: Request, payload: LoginIn, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
+    user = db.query(User).filter(User.email == payload.email.lower().strip()).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid email or password")
     if not user.is_active:

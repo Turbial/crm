@@ -4,12 +4,51 @@ export function getToken() { return localStorage.getItem('token') }
 export function setToken(token) { localStorage.setItem('token', token) }
 export function clearToken() { localStorage.removeItem('token') }
 
+export function getRefreshToken() { return localStorage.getItem('refresh_token') }
+export function setRefreshToken(t) { localStorage.setItem('refresh_token', t) }
+export function clearRefreshToken() { localStorage.removeItem('refresh_token') }
+
+let _refreshing = null  // deduplicate concurrent refresh calls
+
+async function _tryRefresh() {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) return false
+  try {
+    const res = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+    if (!res.ok) return false
+    const data = await res.json()
+    if (!data.access_token) return false
+    setToken(data.access_token)
+    if (data.refresh_token) setRefreshToken(data.refresh_token)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) }
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
   const res = await fetch(`${API_URL}${path}`, { ...options, headers })
-  if (res.status === 401) { clearToken(); window.location.href = '/login'; return }
+
+  if (res.status === 401 && !options._isRetry) {
+    // Try to refresh the access token once before giving up
+    if (!_refreshing) _refreshing = _tryRefresh().finally(() => { _refreshing = null })
+    const refreshed = await _refreshing
+    if (refreshed) {
+      return api(path, { ...options, _isRetry: true })
+    }
+    clearToken()
+    clearRefreshToken()
+    window.location.href = '/login'
+    return
+  }
+
   if (res.status === 204) return null
   if (!res.ok) {
     let detail
@@ -32,5 +71,6 @@ export const del = (path) => api(path, { method: 'DELETE' })
 export async function login(email, password) {
   const data = await post('/auth/login', { email, password })
   setToken(data.access_token)
+  if (data.refresh_token) setRefreshToken(data.refresh_token)
   return data
 }

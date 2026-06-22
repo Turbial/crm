@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import User, Quote
-from app.schemas import QuoteCreate, QuoteOut
+from app.schemas import QuoteCreate, QuoteUpdate, QuoteOut
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 
@@ -25,7 +25,7 @@ def get_item(item_id: str, user: User = Depends(get_current_user), db: Session =
     return item
 
 @router.patch("/{item_id}", response_model=QuoteOut)
-def update_item(item_id: str, payload: QuoteCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_item(item_id: str, payload: QuoteUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     item = db.query(Quote).filter(Quote.id == item_id, Quote.organization_id == user.organization_id).first()
     if not item:
         raise HTTPException(404, "Item not found")

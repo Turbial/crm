@@ -87,7 +87,10 @@ export default function Deals() {
   })
 
   const moveCard = useMutation({
-    mutationFn: ({ id, stage }) => patch(`/deals/${id}`, { stage }),
+    mutationFn: ({ id, stage, stage_id }) => patch(`/deals/${id}`, {
+      stage,
+      ...(stage_id !== undefined ? { stage_id } : {}),
+    }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['deals-board'] }),
   })
 
@@ -174,7 +177,7 @@ export default function Deals() {
   const totalValue = deals.reduce((s, d) => s + (d.value || 0), 0)
 
   const kanbanColumns = (boardData?.stages || []).map(stage => ({
-    column: { id: stage.name, label: stage.name },
+    column: { id: stage.id, label: stage.name },
     tasks: stage.deals || [],
     count: (stage.deals || []).length,
   }))
@@ -320,7 +323,13 @@ export default function Deals() {
               <KanbanBoard
                 columns={kanbanColumns}
                 onCardMove={(task, targetColumn) => {
-                  moveCard.mutate({ id: task.id, stage: targetColumn.label.toLowerCase() })
+                  // targetColumn.id is a UUID when formal stages exist, or a stage-name string in fallback mode
+                  const isUuid = typeof targetColumn.id === 'string' && targetColumn.id.includes('-') && targetColumn.id.length > 20
+                  moveCard.mutate({
+                    id: task.id,
+                    stage: targetColumn.label.toLowerCase(),
+                    ...(isUuid ? { stage_id: targetColumn.id } : {}),
+                  })
                 }}
                 onCardClick={task => navigate(`/crm/deals/${task.id}`)}
                 renderCard={(deal) => (
